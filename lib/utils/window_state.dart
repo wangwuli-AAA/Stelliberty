@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:stelliberty/storage/preferences.dart';
+import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 import 'logger.dart';
 
@@ -28,7 +29,7 @@ class WindowStateManager {
   static Future<void> loadAndApplyState({bool forceSilent = false}) async {
     try {
       // 设置窗口最小尺寸
-      await windowManager.setMinimumSize(_minSize);
+      appWindow.minSize = _minSize;
       await windowManager.setTitle(
         LocaleSettings.instance.currentTranslations.common.appName,
       );

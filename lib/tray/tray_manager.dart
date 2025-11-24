@@ -24,6 +24,7 @@ class AppTrayManager {
   bool? _lastSystemProxyState; // 缓存系统代理状态
   bool? _lastTunState; // 缓存虚拟网卡状态
   bool? _lastSubscriptionState; // 缓存订阅状态
+  String? _lastOutboundMode; // 缓存出站模式状态
 
   // 设置 ClashProvider 用于控制代理
   void setClashProvider(ClashProvider provider) {
@@ -52,6 +53,7 @@ class AppTrayManager {
       _lastProxyState = provider.isRunning; // 初始化缓存
       _lastSystemProxyState = manager.isSystemProxyEnabled;
       _lastTunState = manager.tunEnable;
+      _lastOutboundMode = manager.mode; // 初始化出站模式缓存
 
       // 获取订阅状态
       final hasSubscription =
@@ -95,6 +97,7 @@ class AppTrayManager {
       final manager = ClashManager.instance;
       final currentSystemProxyState = manager.isSystemProxyEnabled;
       final currentTunState = manager.tunEnable;
+      final currentOutboundMode = manager.mode;
       final currentSubscriptionState =
           _subscriptionProvider!.getSubscriptionConfigPath() != null;
 
@@ -103,6 +106,7 @@ class AppTrayManager {
       final systemProxyStateChanged =
           _lastSystemProxyState != currentSystemProxyState;
       final tunStateChanged = _lastTunState != currentTunState;
+      final outboundModeChanged = _lastOutboundMode != currentOutboundMode;
       final subscriptionStateChanged =
           _lastSubscriptionState != currentSubscriptionState;
 
@@ -110,6 +114,7 @@ class AppTrayManager {
       if (!proxyStateChanged &&
           !systemProxyStateChanged &&
           !tunStateChanged &&
+          !outboundModeChanged &&
           !subscriptionStateChanged) {
         return;
       }
@@ -118,13 +123,15 @@ class AppTrayManager {
       _lastProxyState = currentProxyState;
       _lastSystemProxyState = currentSystemProxyState;
       _lastTunState = currentTunState;
+      _lastOutboundMode = currentOutboundMode;
       _lastSubscriptionState = currentSubscriptionState;
 
-      // 更新托盘菜单(系统代理、虚拟网卡、核心运行、订阅状态变化时)
+      // 更新托盘菜单(系统代理、虚拟网卡、核心运行、出站模式、订阅状态变化时)
       if (proxyStateChanged ||
           subscriptionStateChanged ||
           systemProxyStateChanged ||
-          tunStateChanged) {
+          tunStateChanged ||
+          outboundModeChanged) {
         await _updateTrayMenu(currentProxyState, currentSubscriptionState);
       }
 
@@ -186,9 +193,37 @@ class AppTrayManager {
       // 检查虚拟网卡模式是否可用(需管理员权限或服务模式)
       final isTunAvailable = await _checkTunAvailable();
 
+      // 获取当前出站模式
+      final currentMode = manager.mode;
+
       final menu = Menu(
         items: [
           MenuItem(key: 'show_window', label: translate.tray.showWindow),
+          MenuItem.separator(),
+          // 出站模式子菜单
+          MenuItem.submenu(
+            key: 'outbound_mode',
+            label: translate.tray.outboundMode,
+            submenu: Menu(
+              items: [
+                MenuItem.checkbox(
+                  key: 'outbound_mode_rule',
+                  label: translate.tray.ruleMode,
+                  checked: currentMode == 'rule',
+                ),
+                MenuItem.checkbox(
+                  key: 'outbound_mode_global',
+                  label: translate.tray.globalMode,
+                  checked: currentMode == 'global',
+                ),
+                MenuItem.checkbox(
+                  key: 'outbound_mode_direct',
+                  label: translate.tray.directMode,
+                  checked: currentMode == 'direct',
+                ),
+              ],
+            ),
+          ),
           MenuItem.separator(),
           MenuItem.checkbox(
             key: 'toggle_proxy',

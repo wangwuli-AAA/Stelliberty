@@ -659,6 +659,10 @@
     "showWindow": "Show Window",
     "toggleProxy": "Enable Proxy",
     "toggleTun": "Virtual Network Card",
+    "outboundMode": "Outbound Mode",
+    "ruleMode": "Rule Mode",
+    "globalMode": "Global Mode",
+    "directMode": "Direct Mode",
     "exit": "Exit"
   },
   "logs": {

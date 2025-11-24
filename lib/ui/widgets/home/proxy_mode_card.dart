@@ -23,6 +23,28 @@ class _ProxyModeCardState extends State<ProxyModeCard> {
   void initState() {
     super.initState();
     _loadCurrentMode();
+    // 监听 ClashManager 状态变化
+    ClashManager.instance.addListener(_onClashManagerChanged);
+  }
+
+  @override
+  void dispose() {
+    // 移除监听器，防止内存泄漏
+    ClashManager.instance.removeListener(_onClashManagerChanged);
+    super.dispose();
+  }
+
+  // ClashManager 状态变化回调
+  void _onClashManagerChanged() {
+    if (mounted) {
+      final currentMode = ClashManager.instance.mode;
+      if (_selectedMode != currentMode) {
+        setState(() {
+          _selectedMode = currentMode;
+        });
+        Logger.debug('主页出站模式卡片已同步到: $currentMode');
+      }
+    }
   }
 
   Future<void> _loadCurrentMode() async {

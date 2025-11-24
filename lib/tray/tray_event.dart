@@ -85,6 +85,15 @@ class TrayEventHandler with TrayListener {
       case 'toggle_tun':
         toggleTun();
         break;
+      case 'outbound_mode_rule':
+        switchOutboundMode('rule');
+        break;
+      case 'outbound_mode_global':
+        switchOutboundMode('global');
+        break;
+      case 'outbound_mode_direct':
+        switchOutboundMode('direct');
+        break;
       case 'exit':
         exitApp();
         break;
@@ -188,6 +197,48 @@ class TrayEventHandler with TrayListener {
       });
     } catch (e) {
       Logger.error('从托盘切换虚拟网卡模式失败：$e');
+    }
+  }
+
+  // 切换出站模式
+  Future<void> switchOutboundMode(String mode) async {
+    final manager = ClashManager.instance;
+    final isRunning = _clashProvider?.isRunning ?? false;
+    final currentMode = manager.mode;
+
+    // 如果已经是当前模式，直接返回
+    if (currentMode == mode) {
+      Logger.debug('出站模式已经是 $mode，无需切换');
+      return;
+    }
+
+    Logger.info('从托盘切换出站模式: $currentMode → $mode (核心运行: $isRunning)');
+
+    try {
+      bool success;
+      if (isRunning) {
+        // 核心运行时，直接设置模式
+        success = await manager.setMode(mode);
+      } else {
+        // 核心未运行时，离线设置模式
+        success = await manager.setModeOffline(mode);
+      }
+
+      if (success) {
+        Logger.info('出站模式已从托盘切换到: $mode');
+        // 确保状态同步：强制触发一次状态更新通知
+        // 这样主页卡片和其他监听器都能收到更新
+        Future.microtask(() {
+          // 延迟一个微任务确保状态已完全更新
+          if (manager.mode == mode) {
+            Logger.debug('托盘出站模式切换完成，触发状态同步通知');
+          }
+        });
+      } else {
+        Logger.warning('从托盘切换出站模式失败，保持原模式: $currentMode');
+      }
+    } catch (e) {
+      Logger.error('从托盘切换出站模式失败：$e');
     }
   }
 
