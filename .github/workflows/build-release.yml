@@ -26,6 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       pkg: ${{ steps.pkg.outputs.pkg }}
+      pkg_capitalized: ${{ steps.pkg_capitalized.outputs.pkg_capitalized }}
       version: ${{ steps.ver.outputs.version }}
       tag: ${{ steps.tag.outputs.tag }}
       changelog: ${{ steps.changelog.outputs.changelog }}
@@ -46,6 +47,17 @@ jobs:
             exit 1
           fi
           echo "pkg=$pkg" >> $GITHUB_OUTPUT
+
+      - name: 生成首字母大写的包名
+        id: pkg_capitalized
+        run: |
+          pkg="${{ steps.pkg.outputs.pkg }}"
+          # 将首字母转换为大写
+          first_char=$(echo "${pkg:0:1}" | tr '[:lower:]' '[:upper:]')
+          rest="${pkg:1}"
+          pkg_capitalized="${first_char}${rest}"
+          echo "✨ 首字母大写包名: $pkg_capitalized"
+          echo "pkg_capitalized=$pkg_capitalized" >> $GITHUB_OUTPUT
 
       - name: 读取或生成版本号
         id: ver
@@ -407,7 +419,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
-          name: ${{ needs.prepare.outputs.pkg }} ${{ needs.prepare.outputs.version }} 稳定版更新！
+          name: ${{ needs.prepare.outputs.pkg_capitalized }} ${{ needs.prepare.outputs.version }} 更新
           body: |
             ### 📦 构建信息
             
@@ -422,21 +434,40 @@ jobs:
             
             ---
             
-            ### 📥 下载说明
+            ## ❓ 故障排查
             
-            - **x64**: 适用于 Intel/AMD 64位处理器（推荐）
-            - **arm64**: 适用于 ARM64 处理器
+            ### 端口被占用（Windows）
             
-            ### 📝 安装说明
+            如果遇到端口冲突：
             
-            1. 下载对应架构的文件
-            2. 按照文件类型进行安装或解压
-            3. 运行应用程序
+            ```bash
+            # 1. 查找占用端口的进程
+            netstat -ano | findstr :端口号
             
-            ### ⚠️ 重要提示
+            # 2. 结束进程（以管理员身份运行）
+            taskkill /F /PID XXX
+            ```
             
-            - 如遇到问题，请查看项目文档或提交 Issue
-            - 反馈问题时请附上相关日志文件
+            > ⚠️ **重要**：必须以管理员身份运行命令提示符。服务模式启动的核心进程需要提升权限才能终止。
+            
+            ### 软件工作不正常
+            
+            **检查软件所处的安装目录**：
+            
+            - ✅ 路径中不应包含特殊字符（空格除外）
+            - ✅ 路径中不应包含非 ASCII 字符（如中文字符）
+            - ✅ 支持空格：`D:\Program Files\Stelliberty` 可以正常使用
+            - ✅ 建议安装到非系统盘（如 `D:\Stelliberty`、`E:\Apps\Stelliberty`）以避免权限问题
+            
+            如果安装在不正确的目录，请重新安装到合适的位置。
+            
+            ### 缺少运行库（Windows）
+            
+            如果应用程序在 Windows 上无法启动或立即崩溃，可能是缺少必需的 Visual C++ 运行库。
+            
+            **解决方案：**
+            
+            安装 Visual C++ 运行库：[vcredist - Visual C++ 运行库合集](https://gitlab.com/stdout12/vcredist)
 
           files: artifacts/**/*
           draft: false

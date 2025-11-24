@@ -56,7 +56,7 @@
 
 ---
 
-## 📋 普通用户指南
+## 📋 用户指南
 
 ### 系统要求
 
@@ -319,6 +319,14 @@ taskkill /F /PID XXX
 - ✅ 建议安装到非系统盘（如 `D:\Stelliberty`、`E:\Apps\Stelliberty`）以避免权限问题
 
 如果安装在不正确的目录，请重新安装到合适的位置。
+
+### 缺少运行库（Windows）
+
+如果应用程序在 Windows 上无法启动或立即崩溃，可能是缺少必需的 Visual C++ 运行库。
+
+**解决方案：**
+
+安装 Visual C++ 运行库：[vcredist - Visual C++ 运行库合集](https://gitlab.com/stdout12/vcredist)
 
 ---
 

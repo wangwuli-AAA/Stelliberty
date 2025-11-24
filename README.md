@@ -56,7 +56,7 @@ This might be one of the most detail-oriented Flutter desktop applications:
 
 ---
 
-## 📋 For End Users
+## 📋 User Guide
 
 ### System Requirements
 
@@ -319,6 +319,14 @@ taskkill /F /PID XXX
 - ✅ Recommended: Install to non-system drives (e.g., `D:\Stelliberty`, `E:\Apps\Stelliberty`) to avoid permission issues
 
 If installed in an incorrect directory, reinstall to a proper location.
+
+### Missing Runtime Libraries (Windows)
+
+If the application fails to start or crashes immediately on Windows, you may be missing required Visual C++ runtime libraries.
+
+**Solution:**
+
+Install Visual C++ runtimes: [vcredist - Visual C++ Redistributable Runtimes AIO](https://gitlab.com/stdout12/vcredist)
 
 ---
 
