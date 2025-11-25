@@ -22,6 +22,7 @@ jobs:
 
       - name: 检查 Rust 代码格式
         working-directory: native/hub
+        shell: bash
         run: |
           echo "🔍 检查 Rust 代码格式..."
           if ! cargo fmt -- --check; then
@@ -38,6 +39,7 @@ jobs:
 
       - name: 检查 Rust 代码质量
         working-directory: native/hub
+        shell: bash
         run: |
           echo "🔍 运行 Clippy 检查..."
           cargo clippy --all-targets -- -D warnings

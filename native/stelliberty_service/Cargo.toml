@@ -40,7 +40,7 @@ crossterm = "^0.29"
 
 # 进程管理
 sysinfo = "^0.37"
-dirs = "6.0"
+dirs = "^6.0"
 
 # Windows Service 支持
 [target.'cfg(windows)'.dependencies]
@@ -58,6 +58,3 @@ windows = { version = "^0.62", features = [
 # Unix 权限检查
 [target.'cfg(not(windows))'.dependencies]
 libc = "^0.2"
-
-# 目录路径
-dirs = "^6.0"

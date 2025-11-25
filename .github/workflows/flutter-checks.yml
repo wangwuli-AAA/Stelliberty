@@ -33,17 +33,31 @@ jobs:
         run: dart run slang
 
       - name: 检查 Dart 代码格式
+        shell: bash
         run: |
-          echo "🔍 检查 Dart 代码格式..."
-          if ! dart format --output=none --set-exit-if-changed .; then
-            echo ""
-            echo "❌ Dart 代码格式不规范！"
-            echo ""
-            echo "请在本地运行以下命令修复："
-            echo "  dart format ."
-            echo ""
-            exit 1
+          echo "🔍 检查 Dart 代码格式（排除自动生成文件）..."
+          
+          # 排除自动生成的目录：lib/src/bindings, lib/i18n
+          find . -name "*.dart" \
+            -not -path "./lib/src/bindings/*" \
+            -not -path "./lib/i18n/*" \
+            -not -path "./build/*" \
+            > dart_files.txt
+          
+          if [ -s dart_files.txt ]; then
+            if ! cat dart_files.txt | xargs dart format --output=none --set-exit-if-changed; then
+              echo ""
+              echo "❌ Dart 代码格式不规范！"
+              echo ""
+              echo "请在本地运行以下命令修复（排除自动生成文件）："
+              echo "  find . -name \"*.dart\" -not -path \"./lib/src/bindings/*\" -not -path \"./lib/i18n/*\" | xargs dart format"
+              echo ""
+              rm dart_files.txt
+              exit 1
+            fi
           fi
+          
+          rm -f dart_files.txt
           echo "✅ Dart 代码格式检查通过"
 
       - name: 运行 Flutter 静态分析
