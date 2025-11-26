@@ -123,6 +123,7 @@ class TrayEventHandler with TrayListener {
 
       await windowManager.setOpacity(1.0);
       await windowManager.setSkipTaskbar(false);
+      await windowManager.focus();
 
       // 根据保存的状态恢复窗口
       if (shouldMaximize) {

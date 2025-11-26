@@ -6,6 +6,7 @@ import 'package:stelliberty/ui/pages/settings/appearance_settings_page.dart';
 import 'package:stelliberty/ui/pages/settings/language_settings_page.dart';
 import 'package:stelliberty/ui/pages/settings/settings_overview_page.dart';
 import 'package:stelliberty/ui/pages/settings/clash_features_page.dart';
+import 'package:stelliberty/ui/pages/settings/app_update_settings_page.dart';
 import 'package:stelliberty/ui/pages/settings/clash/network_settings_page.dart';
 import 'package:stelliberty/ui/pages/settings/clash/port_control_page.dart';
 import 'package:stelliberty/ui/pages/settings/clash/system_integration_page.dart';
@@ -94,6 +95,8 @@ class _DynamicContentArea extends StatelessWidget {
         return const PerformancePage();
       case ContentView.settingsClashLogsDebug:
         return const LogsDebugPage();
+      case ContentView.settingsAppUpdate:
+        return const AppUpdateSettingsPage();
     }
   }
 }

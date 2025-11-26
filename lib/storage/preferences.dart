@@ -36,6 +36,10 @@ class AppPreferences {
   static const String _kSilentStartEnabled = 'silent_start_enabled';
   static const String _kMinimizeToTray = 'minimize_to_tray';
   static const String _kAppLogEnabled = 'app_log_enabled';
+  static const String _kAppAutoUpdate = 'app_auto_update';
+  static const String _kAppUpdateInterval = 'app_update_interval';
+  static const String _kLastAppUpdateCheckTime = 'last_app_update_check_time';
+  static const String _kIgnoredUpdateVersion = 'ignored_update_version';
 
   // ==================== 主题配置 ====================
 
@@ -210,6 +214,70 @@ class AppPreferences {
     await _prefs!.setBool(_kAppLogEnabled, enabled);
   }
 
+  // ==================== 应用更新配置 ====================
+
+  // 获取应用自动更新启用状态
+  bool getAppAutoUpdate() {
+    _ensureInit();
+    return _prefs!.getBool(_kAppAutoUpdate) ?? false; // 默认禁用
+  }
+
+  // 保存应用自动更新启用状态
+  Future<void> setAppAutoUpdate(bool enabled) async {
+    _ensureInit();
+    await _prefs!.setBool(_kAppAutoUpdate, enabled);
+  }
+
+  // 获取应用更新检测间隔
+  String getAppUpdateInterval() {
+    _ensureInit();
+    return _prefs!.getString(_kAppUpdateInterval) ?? 'startup'; // 默认每次启动
+  }
+
+  // 保存应用更新检测间隔
+  Future<void> setAppUpdateInterval(String interval) async {
+    _ensureInit();
+    await _prefs!.setString(_kAppUpdateInterval, interval);
+  }
+
+  // 获取上次应用更新检查时间
+  DateTime? getLastAppUpdateCheckTime() {
+    _ensureInit();
+    final timeStr = _prefs!.getString(_kLastAppUpdateCheckTime);
+    if (timeStr != null) {
+      try {
+        return DateTime.parse(timeStr);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  // 保存上次应用更新检查时间
+  Future<void> setLastAppUpdateCheckTime(DateTime time) async {
+    _ensureInit();
+    await _prefs!.setString(_kLastAppUpdateCheckTime, time.toIso8601String());
+  }
+
+  // 获取已忽略的更新版本
+  String? getIgnoredUpdateVersion() {
+    _ensureInit();
+    return _prefs!.getString(_kIgnoredUpdateVersion);
+  }
+
+  // 保存已忽略的更新版本
+  Future<void> setIgnoredUpdateVersion(String version) async {
+    _ensureInit();
+    await _prefs!.setString(_kIgnoredUpdateVersion, version);
+  }
+
+  // 清除已忽略的更新版本
+  Future<void> clearIgnoredUpdateVersion() async {
+    _ensureInit();
+    await _prefs!.remove(_kIgnoredUpdateVersion);
+  }
+
   // ==================== 调试和重置 ====================
 
   // 获取所有存储的配置 (调试用)
@@ -229,6 +297,11 @@ class AppPreferences {
       _kSilentStartEnabled,
       _kMinimizeToTray,
       _kAppLogEnabled,
+      _kAppAutoUpdate,
+      _kAppUpdateInterval,
+      _kLastAppUpdateCheckTime,
+      _kIgnoredUpdateVersion,
+      _kIgnoredUpdateVersion,
     ];
 
     final Map<String, dynamic> settings = {};
@@ -257,6 +330,9 @@ class AppPreferences {
       _kSilentStartEnabled,
       _kMinimizeToTray,
       _kAppLogEnabled,
+      _kAppAutoUpdate,
+      _kAppUpdateInterval,
+      _kLastAppUpdateCheckTime,
     ];
 
     for (final key in keys) {

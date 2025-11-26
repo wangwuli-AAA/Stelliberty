@@ -16,6 +16,7 @@ enum ContentView {
   settingsLanguage,
   settingsClashFeatures,
   settingsBehavior,
+  settingsAppUpdate,
 
   // Clash 特性子页面（命名以 settings 开头保持侧边栏选中状态）
   settingsClashNetworkSettings,

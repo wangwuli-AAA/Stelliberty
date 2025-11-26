@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stelliberty/theme/dynamic_theme.dart';
 import 'package:stelliberty/providers/window_effect_provider.dart';
+import 'package:stelliberty/providers/app_update_provider.dart';
 import 'package:stelliberty/ui/layout/main_layout.dart';
 import 'package:stelliberty/ui/layout/title_bar.dart';
+import 'package:stelliberty/ui/widgets/app_update_dialog.dart';
+import 'package:stelliberty/ui/widgets/modern_toast.dart';
 import 'package:stelliberty/clash/manager/manager.dart';
 import 'package:stelliberty/utils/logger.dart';
 
@@ -17,18 +20,77 @@ class BasicLayout extends StatefulWidget {
 }
 
 class _BasicLayoutState extends State<BasicLayout> with WidgetsBindingObserver {
+  VoidCallback? _updateListener;
+
   @override
   void initState() {
     super.initState();
     // 注册应用生命周期监听器
     WidgetsBinding.instance.addObserver(this);
+
+    // 监听自动更新
+    _setupUpdateListener();
   }
 
   @override
   void dispose() {
+    // 移除更新监听器
+    _removeUpdateListener();
     // 移除应用生命周期监听器
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  // 设置更新监听器
+  void _setupUpdateListener() {
+    // 延迟到下一帧，确保 MaterialApp 已构建完成
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final updateProvider = context.read<AppUpdateProvider>();
+
+      // 创建监听器
+      _updateListener = () {
+        if (!mounted) return;
+
+        final updateInfo = updateProvider.latestUpdateInfo;
+        // 检查是否有更新且对话框未显示
+        if (updateInfo != null &&
+            updateInfo.hasUpdate &&
+            !updateProvider.dialogShown) {
+          // 标记对话框已显示（防止重复）
+          updateProvider.markDialogShown();
+
+          // 使用 GlobalKey 访问 Navigator，避免 context 问题
+          final navigator = ModernToast.navigatorKey.currentState;
+          if (navigator != null) {
+            AppUpdateDialog.show(navigator.context, updateInfo).then((_) {
+              // 对话框关闭后清除更新信息
+              if (mounted) {
+                updateProvider.clearUpdateInfo();
+              }
+            });
+          }
+        }
+      };
+
+      // 添加监听器
+      updateProvider.addListener(_updateListener!);
+    });
+  }
+
+  // 移除应用更新监听器
+  void _removeUpdateListener() {
+    if (_updateListener != null) {
+      try {
+        final updateProvider = context.read<AppUpdateProvider>();
+        updateProvider.removeListener(_updateListener!);
+        Logger.debug('已移除应用更新监听器');
+      } catch (e) {
+        Logger.warning('移除应用更新监听器失败: $e');
+      }
+      _updateListener = null;
+    }
   }
 
   @override

@@ -25,8 +25,9 @@ class _ToastQueueItem {
 // 支持队列机制：多个 Toast 按顺序显示，后一个等前一个显示完
 class ModernToast {
   // 全局导航键，用于获取稳定的 Overlay context
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-  
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   // Toast 队列
   static final Queue<_ToastQueueItem> _queue = Queue<_ToastQueueItem>();
 
@@ -47,11 +48,7 @@ class ModernToast {
   }) {
     // 添加到队列（不再保存 context）
     _queue.add(
-      _ToastQueueItem(
-        message: message,
-        type: type,
-        duration: duration,
-      ),
+      _ToastQueueItem(message: message, type: type, duration: duration),
     );
 
     // 如果当前没有在显示，立即处理队列
@@ -71,11 +68,7 @@ class ModernToast {
     final item = _queue.removeFirst();
 
     // 显示当前 Toast
-    await _showSingle(
-      item.message,
-      type: item.type,
-      duration: item.duration,
-    );
+    await _showSingle(item.message, type: item.type, duration: item.duration);
 
     // 继续处理下一个
     await _processQueue();
@@ -89,7 +82,7 @@ class ModernToast {
   }) async {
     // 从 GlobalKey 的 NavigatorState 获取 overlay
     final navigatorState = navigatorKey.currentState;
-    
+
     // 检查 navigator 是否可用
     if (navigatorState == null) {
       debugPrint('[ModernToast] Navigator 不可用，跳过显示');
