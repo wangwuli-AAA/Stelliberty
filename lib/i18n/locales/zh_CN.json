@@ -867,10 +867,15 @@
     "disabled": "已禁用",
     "loading": "正在加载应用列表...",
     "noApps": "未找到 UWP 应用",
-    "applySuccess": "回环豁免设置成功",
+    "applySuccess": "保存成功",
     "applyFailed": "回环豁免设置失败: {error}",
     "applyingChanges": "正在应用更改...",
     "loadFailed": "加载应用列表失败: {error}",
-    "selectedCount": "已选择 {count} 个应用"
+    "selectedCount": "已选择 {count} 个应用",
+    "saveSuccess": "保存成功",
+    "saveFailed": "保存失败，请重试",
+    "errorPermissionDenied": "权限不足，需要以管理员权限重新启动应用",
+    "errorInvalidParameter": "参数无效，请重试或重启应用",
+    "errorSystemRestriction": "系统限制，部分应用无法修改"
   }
 }

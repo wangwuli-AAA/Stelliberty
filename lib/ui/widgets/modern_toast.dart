@@ -270,7 +270,7 @@ class _ToastWidgetState extends State<_ToastWidget>
                           decoration: TextDecoration.none, // 移除任何继承的下划线
                         ),
                         textAlign: TextAlign.start,
-                        maxLines: 3,
+                        maxLines: 5,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),

@@ -4,11 +4,6 @@
 // Windows: 使用任务计划程序（避免 Win11 启动延迟）
 // macOS/Linux: 使用 auto-launch 库
 
-use log::debug;
-
-#[cfg(not(target_os = "windows"))]
-use log::error;
-
 // macOS/Linux 平台使用 auto-launch 库
 #[cfg(not(target_os = "windows"))]
 use auto_launch::AutoLaunchBuilder;
@@ -382,16 +377,16 @@ pub fn set_auto_start_status(enabled: bool) -> Result<bool, String> {
         let mut retries = 0;
 
         while status != enabled && retries < 10 {
-            debug!("状态验证中...（尝试 {}/10）", retries + 1);
+            log::debug!("状态验证中...（尝试 {}/10）", retries + 1);
             std::thread::sleep(std::time::Duration::from_millis(500));
             status = is_auto_start_enabled_windows()?;
             retries += 1;
         }
 
         if status == enabled {
-            debug!("✅ 自启动状态已确认变更为: {}", status);
+            log::debug!("✅ 自启动状态已确认变更为: {}", status);
         } else {
-            debug!("⚠️ 状态验证失败，期望 {}，实际 {}", enabled, status);
+            log::debug!("⚠️ 状态验证失败，期望 {}，实际 {}", enabled, status);
         }
 
         Ok(status)
@@ -421,7 +416,7 @@ pub fn set_auto_start_status(enabled: bool) -> Result<bool, String> {
                     .is_enabled()
                     .map_err(|e| format!("获取自启动状态失败：{}", e))?;
 
-                debug!("已设置开机自启状态为：{}", status);
+                log::debug!("已设置开机自启状态为：{}", status);
                 Ok(status)
             }
             None => Err("自启动模块未初始化".to_string()),
@@ -436,15 +431,15 @@ pub fn init() {
     #[cfg(target_os = "windows")]
     {
         // Windows 使用任务计划程序，无需预加载
-        debug!("Auto-start module initialized (Windows Task Scheduler mode)");
+        log::debug!("Auto-start module initialized (Windows Task Scheduler mode)");
     }
 
     #[cfg(not(target_os = "windows"))]
     {
         if let Err(err) = init_auto_launch() {
-            error!("Failed to initialize auto-start module: {}", err);
+            log::error!("Failed to initialize auto-start module: {}", err);
         } else {
-            debug!("Auto-start module initialized");
+            log::debug!("Auto-start module initialized");
         }
     }
 }

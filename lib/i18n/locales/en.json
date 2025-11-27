@@ -876,10 +876,15 @@
     "disabled": "Disabled",
     "loading": "Loading app list...",
     "noApps": "No UWP apps found",
-    "applySuccess": "Loopback exemption applied successfully",
+    "applySuccess": "Saved successfully",
     "applyFailed": "Failed to apply loopback exemption: {error}",
     "applyingChanges": "Applying changes...",
     "loadFailed": "Failed to load app list: {error}",
-    "selectedCount": "{count} apps selected"
+    "selectedCount": "{count} apps selected",
+    "saveSuccess": "Saved successfully",
+    "saveFailed": "Save failed, please try again",
+    "errorPermissionDenied": "Permission denied, please restart as administrator",
+    "errorInvalidParameter": "Invalid parameter, please try again or restart the app",
+    "errorSystemRestriction": "System restriction, some apps cannot be modified"
   }
 }

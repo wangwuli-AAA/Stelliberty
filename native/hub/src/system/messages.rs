@@ -3,7 +3,6 @@
 // 目的：定义开机自启动、URL 启动、UWP 回环豁免等系统配置的通信接口
 
 use crate::system::auto_start;
-use log::{error, info};
 use rinf::{DartSignal, RustSignal};
 use serde::{Deserialize, Serialize};
 
@@ -33,12 +32,12 @@ impl GetAutoStartStatus {
     //
     // 目的：读取系统中的开机自启动设置
     pub fn handle(&self) {
-        info!("收到获取开机自启动状态请求");
+        log::info!("收到获取开机自启动状态请求");
 
         let (enabled, error_message) = match auto_start::get_auto_start_status() {
             Ok(status) => (status, None),
             Err(err) => {
-                error!("获取开机自启状态失败：{}", err);
+                log::error!("获取开机自启状态失败：{}", err);
                 (false, Some(err))
             }
         };
@@ -57,12 +56,12 @@ impl SetAutoStartStatus {
     //
     // 目的：启用或禁用应用程序的开机自启动
     pub fn handle(&self) {
-        info!("收到设置开机自启动状态请求：enabled={}", self.enabled);
+        log::info!("收到设置开机自启动状态请求：enabled={}", self.enabled);
 
         let (enabled, error_message) = match auto_start::set_auto_start_status(self.enabled) {
             Ok(status) => (status, None),
             Err(err) => {
-                error!("设置开机自启状态失败：{}", err);
+                log::error!("设置开机自启状态失败：{}", err);
                 (false, Some(err))
             }
         };
@@ -98,12 +97,12 @@ impl OpenUrl {
     //
     // 目的：提供跨平台的 URL 打开能力
     pub fn handle(&self) {
-        info!("收到打开 URL 请求：{}", self.url);
+        log::info!("收到打开 URL 请求：{}", self.url);
 
         let (success, error_message) = match crate::system::url_launcher::open_url(&self.url) {
             Ok(()) => (true, None),
             Err(err) => {
-                error!("打开 URL 失败：{}", err);
+                log::error!("打开 URL 失败：{}", err);
                 (false, Some(err))
             }
         };
@@ -123,7 +122,6 @@ impl OpenUrl {
 
 #[cfg(target_os = "windows")]
 pub mod loopback_messages {
-    use log::{error, info};
     use rinf::{DartSignal, RustSignal};
     use serde::{Deserialize, Serialize};
 
@@ -184,11 +182,11 @@ pub mod loopback_messages {
         //
         // 目的：枚举所有 UWP 应用并返回其回环状态
         pub fn handle(&self) {
-            info!("处理获取应用容器请求");
+            log::info!("处理获取应用容器请求");
 
             match crate::system::loopback::enumerate_app_containers() {
                 Ok(containers) => {
-                    info!("发送{}个容器信息到 Dart", containers.len());
+                    log::info!("发送{}个容器信息到 Dart", containers.len());
                     AppContainersList { containers: vec![] }.send_signal_to_dart();
 
                     for c in containers {
@@ -205,10 +203,10 @@ pub mod loopback_messages {
 
                     // 发送流传输完成信号
                     AppContainersComplete.send_signal_to_dart();
-                    info!("应用容器流传输完成");
+                    log::info!("应用容器流传输完成");
                 }
                 Err(e) => {
-                    error!("获取应用容器失败：{}", e);
+                    log::error!("获取应用容器失败：{}", e);
                     AppContainersList { containers: vec![] }.send_signal_to_dart();
                     // 即使失败也发送完成信号，避免 Dart 端无限等待
                     AppContainersComplete.send_signal_to_dart();
@@ -222,9 +220,10 @@ pub mod loopback_messages {
         //
         // 目的：为单个应用启用或禁用回环豁免
         pub fn handle(self) {
-            info!(
+            log::info!(
                 "处理设置回环豁免请求：{} - {}",
-                self.package_family_name, self.enabled
+                self.package_family_name,
+                self.enabled
             );
 
             match crate::system::loopback::set_loopback_exemption(
@@ -232,7 +231,7 @@ pub mod loopback_messages {
                 self.enabled,
             ) {
                 Ok(()) => {
-                    info!("回环豁免设置成功");
+                    log::info!("回环豁免设置成功");
                     SetLoopbackResult {
                         success: true,
                         message: "回环豁免设置成功".to_string(),
@@ -240,7 +239,7 @@ pub mod loopback_messages {
                     .send_signal_to_dart();
                 }
                 Err(e) => {
-                    error!("回环豁免设置失败：{}", e);
+                    log::error!("回环豁免设置失败：{}", e);
                     SetLoopbackResult {
                         success: false,
                         message: e,
@@ -256,13 +255,13 @@ pub mod loopback_messages {
         //
         // 目的：批量设置多个应用的回环豁免状态
         pub fn handle(self) {
-            info!("处理保存配置请求，期望启用{}个容器", self.sid_strings.len());
+            log::info!("处理保存配置请求，期望启用{}个容器", self.sid_strings.len());
 
             // 获取所有容器
             let containers = match crate::system::loopback::enumerate_app_containers() {
                 Ok(c) => c,
                 Err(e) => {
-                    error!("枚举容器失败：{}", e);
+                    log::error!("枚举容器失败：{}", e);
                     SaveLoopbackConfigurationResult {
                         success: false,
                         message: format!("无法枚举容器：{}", e),
@@ -277,14 +276,16 @@ pub mod loopback_messages {
             let enabled_sids: HashSet<&str> = self.sid_strings.iter().map(|s| s.as_str()).collect();
 
             let mut errors = Vec::new();
+            let mut skipped = Vec::new();
             let mut success_count = 0;
+            let mut skipped_count = 0;
 
             // 对每个容器，检查是否应该启用（现在是 O(1) 查找）
             for container in containers {
                 let should_enable = enabled_sids.contains(container.sid_string.as_str());
 
                 if container.is_loopback_enabled != should_enable {
-                    info!(
+                    log::info!(
                         "修改容器：{}(SID：{}) | {} -> {}",
                         container.display_name,
                         container.sid_string,
@@ -296,33 +297,63 @@ pub mod loopback_messages {
                         &container.sid,
                         should_enable,
                     ) {
-                        error!("设置容器失败：{} - {}", container.display_name, e);
-                        errors.push(format!("{}：{}", container.display_name, e));
+                        // 检查是否是系统保护的应用（ERROR_ACCESS_DENIED）
+                        if e.contains("0x80070005")
+                            || e.contains("0x00000005")
+                            || e.contains("ERROR_ACCESS_DENIED")
+                        {
+                            log::info!("跳过系统保护的应用：{}", container.display_name);
+                            skipped.push(container.display_name.clone());
+                            skipped_count += 1;
+                        } else {
+                            log::error!("设置容器失败：{} - {}", container.display_name, e);
+                            errors.push(format!("{}：{}", container.display_name, e));
+                        }
                     } else {
                         success_count += 1;
                     }
                 }
             }
 
-            info!(
-                "配置保存完成 | 修改：{} | 错误：{}",
+            log::info!(
+                "配置保存完成，成功：{}，跳过：{}，错误：{}",
                 success_count,
+                skipped_count,
                 errors.len()
             );
+
+            // 构建结果消息
+            let mut message_parts = Vec::new();
+
+            if success_count > 0 {
+                message_parts.push(format!("成功修改：{}个", success_count));
+            }
+
+            if skipped_count > 0 {
+                message_parts.push(format!("跳过系统保护应用：{}个", skipped_count));
+                if skipped.len() <= 3 {
+                    // 如果跳过的应用少于等于3个，显示具体名称
+                    message_parts.push(format!("（{}）", skipped.join("、")));
+                }
+            }
 
             if errors.is_empty() {
                 SaveLoopbackConfigurationResult {
                     success: true,
-                    message: format!("配置保存成功（修改：{}个容器）", success_count),
+                    message: if message_parts.is_empty() {
+                        "配置保存成功（无需修改）".to_string()
+                    } else {
+                        message_parts.join("，")
+                    },
                 }
                 .send_signal_to_dart();
             } else {
+                message_parts.push(format!("失败：{}个", errors.len()));
                 SaveLoopbackConfigurationResult {
                     success: false,
                     message: format!(
-                        "部分操作失败（成功：{}，失败：{}）：\n{}",
-                        success_count,
-                        errors.len(),
+                        "{}。\n错误详情：\n{}",
+                        message_parts.join("，"),
                         errors.join("\n")
                     ),
                 }

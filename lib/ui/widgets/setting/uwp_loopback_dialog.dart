@@ -780,15 +780,34 @@ class _UwpLoopbackDialogState extends State<UwpLoopbackDialog>
       if (mounted) {
         if (result.message.success) {
           // 成功，显示提示并关闭对话框
-          ModernToast.success(context, result.message.message);
+          ModernToast.success(
+            context,
+            context.translate.uwpLoopback.saveSuccess,
+          );
           _animationController.reverse().then((_) {
             if (mounted) {
               Navigator.of(context).pop();
             }
           });
         } else {
-          // 失败，显示错误
-          ModernToast.error(context, result.message.message);
+          // 失败，根据错误类型显示友好提示
+          final errorMsg = result.message.message;
+          final t = context.translate.uwpLoopback;
+          String userFriendlyMsg;
+
+          if (errorMsg.contains('权限不足') ||
+              errorMsg.contains('ERROR_ACCESS_DENIED')) {
+            userFriendlyMsg = t.errorPermissionDenied;
+          } else if (errorMsg.contains('参数无效') ||
+              errorMsg.contains('ERROR_INVALID_PARAMETER')) {
+            userFriendlyMsg = t.errorInvalidParameter;
+          } else if (errorMsg.contains('系统限制') || errorMsg.contains('E_FAIL')) {
+            userFriendlyMsg = t.errorSystemRestriction;
+          } else {
+            userFriendlyMsg = t.saveFailed;
+          }
+
+          ModernToast.error(context, userFriendlyMsg);
         }
       }
     } catch (e) {

@@ -268,11 +268,16 @@ pub fn set_loopback_exemption_by_sid(sid_bytes: &[u8], enabled: bool) -> Result<
             );
             log::error!("{} (SID：{})", error_msg, sid_string);
 
-            // 添加常见错误码的解释
+            // 添加常见错误码的解释（精简版，适合 UI 显示）
+            // 注意：Windows API 可能返回 HRESULT (0x80070005) 或 Win32 错误码 (5)
             let error_detail = match error_code {
-                0x80070005 => "拒绝访问 (ERROR_ACCESS_DENIED) - 可能需要管理员权限",
-                0x80070057 => "参数无效 (ERROR_INVALID_PARAMETER) - SID 格式可能有问题",
-                0x80004005 => "未指定的错误 (E_FAIL) - 系统保护的包或策略限制",
+                // HRESULT 格式
+                0x80070005 => "权限不足",
+                0x80070057 => "参数无效",
+                0x80004005 => "系统限制",
+                // Win32 原始错误码格式
+                5 => "权限不足",
+                87 => "参数无效",
                 _ => "未知错误",
             };
 
@@ -377,9 +382,13 @@ pub fn set_loopback_exemption(package_family_name: &str, enabled: bool) -> Resul
 
             // 添加常见错误码的解释
             let error_detail = match error_code {
-                0x80070005 => "拒绝访问 (ERROR_ACCESS_DENIED) - 可能需要管理员权限",
-                0x80070057 => "参数无效 (ERROR_INVALID_PARAMETER) - SID 格式可能有问题",
-                0x80004005 => "未指定的错误 (E_FAIL) - 系统保护的包或策略限制",
+                // HRESULT 格式
+                0x80070005 => "权限不足",
+                0x80070057 => "参数无效",
+                0x80004005 => "系统限制",
+                // Win32 原始错误码格式
+                5 => "权限不足",
+                87 => "参数无效",
                 _ => "未知错误",
             };
 
