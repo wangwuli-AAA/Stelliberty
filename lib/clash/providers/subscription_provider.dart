@@ -536,41 +536,73 @@ class SubscriptionProvider extends ChangeNotifier {
     _autoUpdateTimer?.cancel();
     _autoUpdateTimer = null;
 
-    // 计算下次检查间隔
-    final interval = _calculateNextCheckInterval();
+    // 计算最短更新间隔
+    final shortestInterval = _calculateNextCheckInterval();
 
     // 如果没有需要自动更新的订阅，停止定时器
-    if (interval == null) {
+    if (shortestInterval == null) {
       Logger.info('无启用自动更新的订阅，定时器已停止');
       return;
     }
 
-    // 创建新的定时器（带并发保护）
-    _autoUpdateTimer = Timer(interval, () async {
-      // 防止重复执行
-      if (_stateManager.isAutoUpdating) {
-        Logger.warning('自动更新正在执行中，跳过本次触发');
-        return;
-      }
+    // 使用动态检查间隔：取最短更新间隔和 1 小时中的较小值
+    // 这样既能尊重用户设置的更新间隔，又能在应用频繁重启时及时触发更新
+    final checkInterval = shortestInterval < const Duration(hours: 1)
+        ? shortestInterval
+        : const Duration(hours: 1);
 
-      _stateManager.setAutoUpdating(reason: '定时器触发自动更新');
-      try {
-        await autoUpdateSubscriptions();
-      } catch (e) {
-        Logger.error('自动更新订阅失败：$e');
-        _stateManager.setError(
-          errorState: SubscriptionErrorState.unknownError,
-          errorMessage: '自动更新失败: $e',
-          reason: '自动更新异常',
-        );
-      } finally {
-        _stateManager.setIdle(reason: '自动更新完成');
-        // 递归调用，重新计算下次间隔
-        _restartAutoUpdateTimer();
+    // 创建周期性定时器
+    _autoUpdateTimer = Timer.periodic(checkInterval, (_) {
+      _checkAndAutoUpdate();
+    });
+
+    // 延迟启动时的立即检查，避免与定时器首次触发重叠
+    // 使用 2 秒延迟不会影响冷启动速度（异步执行，不阻塞 UI）
+    Future.delayed(const Duration(seconds: 2), () {
+      // 检查定时器是否仍然存在（可能已被取消）
+      if (_autoUpdateTimer != null) {
+        _checkAndAutoUpdate();
       }
     });
 
-    Logger.info('自动更新定时器已启动（间隔：${interval.inMinutes} 分钟）');
+    Logger.info(
+      '自动更新定时器已启动（检查间隔：${checkInterval.inMinutes} 分钟，订阅最短更新间隔：${shortestInterval.inMinutes} 分钟）',
+    );
+  }
+
+  // 检查并执行自动更新
+  void _checkAndAutoUpdate() async {
+    // 防止重复执行
+    if (_stateManager.isAutoUpdating) {
+      Logger.debug('自动更新正在执行中，跳过本次检查');
+      return;
+    }
+
+    // 过滤出需要更新的订阅
+    final needUpdateSubscriptions = _subscriptions
+        .where((s) => s.needsUpdate)
+        .toList();
+
+    if (needUpdateSubscriptions.isEmpty) {
+      Logger.debug('定时检查：没有订阅需要更新');
+      return;
+    }
+
+    Logger.info('定时检查：发现 ${needUpdateSubscriptions.length} 个订阅需要更新');
+
+    _stateManager.setAutoUpdating(reason: '定时器触发自动更新');
+    try {
+      await autoUpdateSubscriptions();
+    } catch (e) {
+      Logger.error('自动更新订阅失败：$e');
+      _stateManager.setError(
+        errorState: SubscriptionErrorState.unknownError,
+        errorMessage: '自动更新失败: $e',
+        reason: '自动更新异常',
+      );
+    } finally {
+      _stateManager.setIdle(reason: '自动更新完成');
+    }
   }
 
   // 自动更新需要更新的订阅

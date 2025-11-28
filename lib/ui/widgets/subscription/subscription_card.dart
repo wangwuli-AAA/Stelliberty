@@ -72,121 +72,76 @@ class SubscriptionCard extends StatelessWidget {
 
         return Stack(
           children: [
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: Color.alphaBlend(
-                  mixColor.withValues(alpha: mixOpacity),
-                  isSelected
-                      ? colorScheme.primaryContainer.withValues(alpha: 0.2)
-                      : colorScheme.surface.withValues(
-                          alpha: isDark ? 0.7 : 0.85,
-                        ),
-                ),
-                border: Border.all(
-                  color: isSelected
-                      ? colorScheme.primary.withValues(
-                          alpha: isDark ? 0.7 : 0.6,
-                        )
-                      : colorScheme.outline.withValues(alpha: 0.4),
-                  width: 2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
-                    blurRadius: isSelected ? 12 : 8,
-                    offset: Offset(0, isSelected ? 3 : 2),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
+            // 整个卡片（更新时置灰）
+            Opacity(
+              opacity: isUpdating ? 0.5 : 1.0,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  onTap: onTap,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 标题行
-                        _buildTitleRow(context, isUpdating, isBatchUpdating),
+                  color: Color.alphaBlend(
+                    mixColor.withValues(alpha: mixOpacity),
+                    isSelected
+                        ? colorScheme.primaryContainer.withValues(alpha: 0.2)
+                        : colorScheme.surface.withValues(
+                            alpha: isDark ? 0.7 : 0.85,
+                          ),
+                  ),
+                  border: Border.all(
+                    color: isSelected
+                        ? colorScheme.primary.withValues(
+                            alpha: isDark ? 0.7 : 0.6,
+                          )
+                        : colorScheme.outline.withValues(alpha: 0.4),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
+                      blurRadius: isSelected ? 12 : 8,
+                      offset: Offset(0, isSelected ? 3 : 2),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: isUpdating ? null : onTap,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 标题行
+                          _buildTitleRow(context, isUpdating, isBatchUpdating),
 
-                        const SizedBox(height: 8),
+                          const SizedBox(height: 8),
 
-                        // URL
-                        _buildUrlText(),
+                          // URL
+                          _buildUrlText(),
 
-                        const SizedBox(height: 8),
+                          const SizedBox(height: 8),
 
-                        // 状态标签与流量进度条并排（只有真正有流量数据时才显示进度条）
-                        if (subscription.info != null &&
-                            subscription.info!.total > 0)
-                          _buildStatusWithTraffic(context)
-                        else
-                          _buildStatusChips(context),
+                          // 状态标签与流量进度条并排（只有真正有流量数据时才显示进度条）
+                          if (subscription.info != null &&
+                              subscription.info!.total > 0)
+                            _buildStatusWithTraffic(context)
+                          else
+                            _buildStatusChips(context),
 
-                        // 错误信息显示
-                        if (subscription.lastError != null) ...[
-                          const SizedBox(height: 12),
-                          _buildErrorInfo(context),
+                          // 错误信息显示
+                          if (subscription.lastError != null) ...[
+                            const SizedBox(height: 12),
+                            _buildErrorInfo(context),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-            // 灰色蒙层（更新时显示）
-            if (isUpdating)
-              Positioned.fill(
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            context.translate.subscription.updating,
-                            style: TextStyle(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
           ],
         );
       },
@@ -200,14 +155,13 @@ class SubscriptionCard extends StatelessWidget {
     bool isBatchUpdating,
   ) {
     final isDisabled = isUpdating || isBatchUpdating;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Row(
       children: [
         Icon(
           Icons.rss_feed,
-          color: isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Colors.grey,
+          color: isSelected ? colorScheme.primary : Colors.grey,
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -220,23 +174,30 @@ class SubscriptionCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        if (isSelected)
-          Icon(
-            Icons.check_circle,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+        if (isSelected) Icon(Icons.check_circle, color: colorScheme.primary),
         const SizedBox(width: 8),
-        // 独立更新按钮
+        // 独立更新按钮（更新时显示转圈指示器）
         if (!subscription.isLocalFile)
           IconButton(
             onPressed: isDisabled ? null : onUpdate,
-            icon: Icon(
-              Icons.sync_rounded,
-              size: 20,
-              color: isDisabled
-                  ? Colors.grey.withValues(alpha: 0.3)
-                  : Theme.of(context).colorScheme.primary,
-            ),
+            icon: isUpdating
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        colorScheme.primary,
+                      ),
+                    ),
+                  )
+                : Icon(
+                    Icons.sync_rounded,
+                    size: 20,
+                    color: isBatchUpdating
+                        ? Colors.grey.withValues(alpha: 0.3)
+                        : colorScheme.primary,
+                  ),
             tooltip: context.translate.subscription.updateCard,
             style: IconButton.styleFrom(
               padding: const EdgeInsets.all(8),

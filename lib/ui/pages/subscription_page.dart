@@ -367,7 +367,30 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     SubscriptionProvider provider,
     Subscription subscription,
   ) async {
-    await provider.updateSubscription(subscription.id);
+    final success = await provider.updateSubscription(subscription.id);
+
+    if (!context.mounted) return;
+
+    if (success) {
+      ModernToast.success(
+        context,
+        context.translate.subscription.updateSuccess.replaceAll(
+          '{name}',
+          subscription.name,
+        ),
+      );
+    } else {
+      // 从订阅对象获取错误信息
+      final updatedSubscription = provider.subscriptions.firstWhere(
+        (s) => s.id == subscription.id,
+        orElse: () => subscription,
+      );
+      final errorMsg =
+          updatedSubscription.lastError ??
+          context.translate.subscription.updateFailed;
+
+      ModernToast.error(context, '${subscription.name}: $errorMsg');
+    }
   }
 
   // 更新所有订阅
@@ -375,7 +398,32 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     BuildContext context,
     SubscriptionProvider provider,
   ) async {
-    await provider.updateAllSubscriptions();
+    final errors = await provider.updateAllSubscriptions();
+
+    if (!context.mounted) return;
+
+    if (errors.isEmpty) {
+      ModernToast.success(
+        context,
+        context.translate.subscription.updateAllSuccess,
+      );
+    } else {
+      // 显示部分成功或全部失败的提示
+      final successCount = provider.subscriptions.length - errors.length;
+      if (successCount > 0) {
+        ModernToast.warning(
+          context,
+          context.translate.subscription.updatePartialSuccess
+              .replaceAll('{success}', successCount.toString())
+              .replaceAll('{failed}', errors.length.toString()),
+        );
+      } else {
+        ModernToast.error(
+          context,
+          context.translate.subscription.updateAllFailed,
+        );
+      }
+    }
   }
 
   // 删除订阅
