@@ -295,6 +295,14 @@ impl StopClashProcess {
             Some(process) => match process.stop() {
                 Ok(()) => {
                     log::info!("Clash 进程已停止");
+
+                    // 异步清理网络资源（IPC 连接池和 WebSocket）
+                    tokio::spawn(async {
+                        log::info!("开始清理网络资源");
+                        super::network::handlers::cleanup_all_network_resources().await;
+                        log::info!("网络资源清理完成");
+                    });
+
                     ClashProcessResult {
                         success: true,
                         error_message: None,

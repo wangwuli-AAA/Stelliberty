@@ -930,6 +930,14 @@ impl StopClash {
         match service_manager.stop_clash().await {
             Ok(()) => {
                 log::info!("通过服务停止 Clash 成功");
+
+                // 异步清理网络资源（IPC 连接池和 WebSocket）
+                tokio::spawn(async {
+                    log::info!("开始清理网络资源（服务模式）");
+                    super::network::handlers::cleanup_all_network_resources().await;
+                    log::info!("网络资源清理完成（服务模式）");
+                });
+
                 ClashProcessResult {
                     success: true,
                     error_message: None,
