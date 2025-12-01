@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stelliberty/clash/manager/manager.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
+import 'package:stelliberty/tray/tray_manager.dart';
 import 'package:stelliberty/ui/widgets/home/base_card.dart';
 import 'package:stelliberty/utils/logger.dart';
 import 'package:stelliberty/i18n/i18n.dart';
@@ -198,6 +199,8 @@ class _OutboundModeCardState extends State<OutboundModeCard> {
           }
         }
       }
+      // 出站模式切换后手动更新托盘菜单
+      AppTrayManager().updateTrayMenuManually();
     } catch (e) {
       Logger.error('切换出站模式失败: $e');
       await _loadCurrentMode();

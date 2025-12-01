@@ -10,6 +10,7 @@ import 'package:stelliberty/ui/widgets/override/override_selector_dialog.dart';
 import 'package:stelliberty/ui/widgets/subscription/provider_viewer_dialog.dart';
 import 'package:stelliberty/ui/widgets/file_editor_dialog.dart';
 import 'package:stelliberty/ui/widgets/modern_toast.dart';
+import 'package:stelliberty/ui/widgets/confirm_dialog.dart';
 import 'package:stelliberty/providers/content_provider.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 import 'package:stelliberty/utils/logger.dart';
@@ -24,10 +25,60 @@ class SubscriptionPage extends StatefulWidget {
 }
 
 class _SubscriptionPageState extends State<SubscriptionPage> {
+  bool _hasPerformedStartupUpdate = false;
+
   @override
   void initState() {
     super.initState();
     Logger.info('初始化 SubscriptionPage');
+
+    // 延迟执行启动时更新，避免阻塞 UI 初始化
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _performStartupUpdate();
+      }
+    });
+  }
+
+  // 执行启动时更新（并发执行，提升性能）
+  Future<void> _performStartupUpdate() async {
+    // 防止重复执行
+    if (_hasPerformedStartupUpdate) return;
+    _hasPerformedStartupUpdate = true;
+
+    final provider = context.read<SubscriptionProvider>();
+
+    // 找到所有启用了"启动时更新"的订阅（排除本地文件）
+    final startupUpdateSubscriptions = provider.subscriptions
+        .where((s) => s.updateOnStartup && !s.isLocalFile)
+        .toList();
+
+    if (startupUpdateSubscriptions.isEmpty) {
+      Logger.info('没有启用启动时更新的订阅');
+      return;
+    }
+
+    Logger.info(
+      '发现 ${startupUpdateSubscriptions.length} 个启用启动时更新的订阅',
+    );
+
+    // 使用并发更新提升性能，限制并发数为 3
+    const concurrency = 3;
+
+    for (int i = 0; i < startupUpdateSubscriptions.length; i += concurrency) {
+      final batch = startupUpdateSubscriptions.skip(i).take(concurrency);
+
+      // 并发更新一批订阅
+      final batchFutures = batch.map((subscription) async {
+        Logger.info('启动时更新订阅：${subscription.name}');
+        await provider.updateSubscription(subscription.id);
+      });
+
+      // 等待当前批次完成后再处理下一批
+      await Future.wait(batchFutures);
+    }
+
+    Logger.info('启动时更新完成');
   }
 
   @override
@@ -277,6 +328,8 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                   _showEditSubscriptionDialog(context, provider, subscription),
               onEditFile: () =>
                   _showFileEditorDialog(context, provider, subscription),
+              onViewConfig: () =>
+                  _showViewConfigDialog(context, provider, subscription),
               onDelete: () =>
                   _deleteSubscription(context, provider, subscription),
               onManageOverride: () => _showOverrideManagementDialog(
@@ -313,8 +366,9 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
         return await provider.addSubscription(
           name: result.name,
           url: result.url!,
-          autoUpdate: result.autoUpdate,
-          autoUpdateInterval: result.autoUpdateInterval,
+          autoUpdateMode: result.autoUpdateMode,
+          intervalMinutes: result.intervalMinutes,
+          updateOnStartup: result.updateOnStartup,
           proxyMode: result.proxyMode,
         );
       },
@@ -339,8 +393,9 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     Logger.debug('打开编辑订阅对话框');
     Logger.debug('订阅名称：${latestSubscription.name}');
     Logger.debug('当前代理模式：${latestSubscription.proxyMode.displayName}');
-    Logger.debug('自动更新：${latestSubscription.autoUpdate}');
-    Logger.debug('更新间隔：${latestSubscription.autoUpdateInterval.inMinutes} 分钟');
+    Logger.debug('自动更新模式：${latestSubscription.autoUpdateMode.value}');
+    Logger.debug('更新间隔：${latestSubscription.intervalMinutes} 分钟');
+    Logger.debug('启动时更新：${latestSubscription.updateOnStartup}');
 
     final result = await SubscriptionDialog.showEditDialog(
       context,
@@ -355,8 +410,9 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
         subscriptionId: subscription.id,
         name: result.name,
         url: result.url,
-        autoUpdate: result.autoUpdate,
-        autoUpdateInterval: result.autoUpdateInterval,
+        autoUpdateMode: result.autoUpdateMode,
+        intervalMinutes: result.intervalMinutes,
+        updateOnStartup: result.updateOnStartup,
         proxyMode: result.proxyMode,
       );
     }
@@ -457,31 +513,15 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     SubscriptionProvider provider,
     Subscription subscription,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.translate.subscription.deleteConfirm),
-        content: Text(
-          context.translate.subscription.deleteConfirmMessage.replaceAll(
-            '{name}',
-            subscription.name,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(context.translate.common.cancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(context.translate.common.delete),
-          ),
-        ],
+      title: context.translate.subscription.deleteConfirm,
+      message: context.translate.subscription.deleteConfirmMessage.replaceAll(
+        '{name}',
+        subscription.name,
       ),
+      confirmText: context.translate.common.delete,
+      isDanger: true,
     );
 
     if (confirmed == true && context.mounted) {
@@ -567,6 +607,51 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
             newContent,
           );
         },
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+
+      ModernToast.error(
+        context,
+        context.translate.fileEditor.readError.replaceAll(
+          '{error}',
+          error.toString(),
+        ),
+      );
+    }
+  }
+
+  // 显示运行配置查看器对话框（只读模式）
+  Future<void> _showViewConfigDialog(
+    BuildContext context,
+    SubscriptionProvider provider,
+    Subscription subscription,
+  ) async {
+    try {
+      await WidgetsBinding.instance.endOfFrame;
+      if (!context.mounted) return;
+
+      // 从 Provider 获取最新的订阅数据
+      final latestSubscription = provider.subscriptions.firstWhere(
+        (s) => s.id == subscription.id,
+        orElse: () => subscription,
+      );
+
+      Logger.debug('打开运行配置查看器');
+      Logger.debug('订阅名称：${latestSubscription.name}');
+
+      // 读取订阅文件内容
+      final content = await provider.service.readSubscriptionConfig(
+        latestSubscription,
+      );
+      if (!context.mounted) return;
+
+      await FileEditorDialog.show(
+        context,
+        fileName: '${latestSubscription.name}.yaml',
+        initialContent: content,
+        readOnly: true, // 只读模式
+        onSave: null, // 只读模式无需保存回调
       );
     } catch (error) {
       if (!context.mounted) return;
@@ -713,8 +798,9 @@ class _SubscriptionListState {
       if (a[i].id != b[i].id ||
           a[i].name != b[i].name ||
           a[i].url != b[i].url ||
-          a[i].autoUpdate != b[i].autoUpdate ||
-          a[i].autoUpdateInterval != b[i].autoUpdateInterval ||
+          a[i].autoUpdateMode != b[i].autoUpdateMode ||
+          a[i].intervalMinutes != b[i].intervalMinutes ||
+          a[i].updateOnStartup != b[i].updateOnStartup ||
           a[i].proxyMode != b[i].proxyMode ||
           a[i].isUpdating != b[i].isUpdating ||
           a[i].isLocalFile != b[i].isLocalFile ||
