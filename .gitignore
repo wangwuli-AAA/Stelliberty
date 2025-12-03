@@ -94,3 +94,105 @@ app.*.map.json
 # 测试文件
 /assets/test/*
 
+# 环境变量和配置文件
+.env
+.env.*
+.envrc
+*.env
+config.local.*
+secrets.*
+*.secret
+
+# 认证和密钥文件
+*.key
+*.pem
+*.p12
+*.pfx
+*.cer
+*.crt
+*.keystore
+*.jks
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+*.asc
+*.gpg
+
+# API 密钥和令牌
+*api_key*
+*api-key*
+*apikey*
+*token*
+*secret*
+credentials.*
+auth.*
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# 备份文件（可能包含敏感数据）
+*.backup
+*.bak
+*.old
+*.orig
+*.tmp
+*~
+*.swp
+*.swo
+
+# 用户数据和缓存
+user_data/
+cache/
+*.cache
+.cache/
+
+# 日志文件（可能包含敏感信息）
+*.log
+logs/
+*.log.*
+
+# 配置文件的本地副本
+*-local.*
+*.local
+local_config.*
+
+# macOS 特定
+.Spotlight-V100
+.Trashes
+.fseventsd
+.TemporaryItems
+.DocumentRevisions-V100
+*.photoslibrary
+
+# Windows 特定
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# 个人笔记和文档
+TODO.txt
+NOTES.txt
+notes/
+personal/
+private/
+
+# 调试和分析文件
+*.dmp
+*.stackdump
+core
+core.*
+*.trace
+
+# 临时上传文件
+uploads/
+temp/
+tmp/
+
+
