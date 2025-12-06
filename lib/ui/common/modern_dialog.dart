@@ -257,55 +257,58 @@ class _ModernDialogState extends State<ModernDialog>
             ? Colors.white.withValues(alpha: 0.06)
             : Colors.white.withValues(alpha: 0.3),
       ),
-      child: TextField(
-        controller: widget.searchController,
-        onChanged: widget.onSearchChanged,
-        decoration: InputDecoration(
-          hintText: widget.searchHint,
-          prefixIcon: Icon(
-            Icons.search,
-            size: 20,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.5),
+      child: Material(
+        color: Colors.transparent,
+        child: TextField(
+          controller: widget.searchController,
+          onChanged: widget.onSearchChanged,
+          decoration: InputDecoration(
+            hintText: widget.searchHint,
+            prefixIcon: Icon(
+              Icons.search,
+              size: 20,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+            suffixIcon: widget.searchController!.text.isNotEmpty
+                ? IconButton(
+                    icon: Icon(
+                      Icons.clear,
+                      size: 20,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    onPressed: () {
+                      widget.searchController!.clear();
+                      widget.onSearchChanged?.call('');
+                    },
+                  )
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+            filled: true,
+            fillColor: isDark
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.white.withValues(alpha: 0.5),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            hintStyle: TextStyle(
+              fontSize: 14,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
           ),
-          suffixIcon: widget.searchController!.text.isNotEmpty
-              ? IconButton(
-                  icon: Icon(
-                    Icons.clear,
-                    size: 20,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                  onPressed: () {
-                    widget.searchController!.clear();
-                    widget.onSearchChanged?.call('');
-                  },
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.white.withValues(alpha: 0.5),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
-          hintStyle: TextStyle(
+          style: TextStyle(
             fontSize: 14,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.5),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
-        ),
-        style: TextStyle(
-          fontSize: 14,
-          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );
@@ -337,7 +340,10 @@ class _ModernDialogState extends State<ModernDialog>
             ? Colors.white.withValues(alpha: 0.06)
             : Colors.white.withValues(alpha: 0.3),
         // 根据 showDividers 决定是否显示底部边框
-        border: widget.showDividers && widget.headerWidget == null
+        border:
+            widget.showDividers &&
+                widget.headerWidget == null &&
+                widget.searchController == null
             ? Border(
                 bottom: BorderSide(
                   color: Colors.white.withValues(alpha: isDark ? 0.1 : 0.3),
