@@ -130,7 +130,13 @@ jobs:
             arch: arm64
           - platform: linux
             os: ubuntu-22.04
-            arch: amd64
+            arch: x64
+          - platform: macos
+            os: macos-latest
+            arch: x64
+          - platform: macos
+            os: macos-latest
+            arch: arm64
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -223,6 +229,18 @@ jobs:
               echo "❌ 错误: build/packages 目录不存在"
               exit 1
             fi
+         elif [ "$RUNNER_OS" = "macOS" ]; then
+           mkdir -p dist
+           if [ -d "build/packages" ]; then
+             cp -r build/packages/* dist/
+             echo "✅ 构建产物已复制到 dist/"
+             echo ""
+             echo "📦 产物列表:"
+             ls -lh dist/
+           else
+             echo "❌ 错误: build/packages 目录不存在"
+             exit 1
+           fi
           fi
 
       - name: 上传构建产物
@@ -329,6 +347,7 @@ jobs:
             支持平台：
             - **Windows**: `x64`, `arm64`
             - **Linux**: `amd64`, `arm64`
+            - **macOS**: `x64`, `arm64`
             
             所有构建产物已打包上传，请根据需要下载。
 
