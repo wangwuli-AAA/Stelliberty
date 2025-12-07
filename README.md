@@ -116,6 +116,25 @@ The installer enforces the following path restrictions for security and stabilit
 4. Run `./stelliberty` from the extracted directory.
 5. ✅ Ready to use.
 
+#### Package Version (Debian/Ubuntu)
+
+   1. Download the `.deb` file for your architecture (`amd64` or `arm64`) from the release page.
+
+   2. Install it(Modify the installation package name yourself):
+
+      ```
+      sudo apt install ./Stelliberty-v1.1.20-linux-x64.deb
+      ```
+
+   3. **Important:** Change the ownership of this directory and its subdirectories to the current user, and ensure read, write, and execute permissions:
+
+      ```
+      sudo chown -R $USER:$USER /opt/stelliberty
+      chmod -R u+rwx /opt/stelliberty
+      ```
+
+   4. Run the application directly.
+      
 ### Reporting Issues
 
 If you encounter any issues:

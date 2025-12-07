@@ -117,6 +117,21 @@
 4. 直接运行解压目录中的 `./stelliberty`
 5. ✅ 开箱即用
 
+#### 安装包版（Debian/Ubuntu）
+1. 从发布页面下载适用于您架构（`amd64` 或 `arm64`）的 `.deb` 文件
+2. 安装（自行修改安装包名字）：
+
+   ```bash
+   sudo apt install ./Stelliberty-v1.1.20-linux-x64.deb
+   ```
+3. **重要：** 将这个目录及其子目录的所有权改为当前用户，并保证有读写执行权限。：
+   
+   ```bash
+   sudo chown -R $USER:$USER /opt/stelliberty
+   chmod -R u+rwx /opt/stelliberty
+   ```
+4. 直接运行软件
+
 ### 问题反馈
 
 如果遇到任何问题：
