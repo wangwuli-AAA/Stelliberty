@@ -183,7 +183,13 @@ jobs:
         working-directory: scripts
 
       - name: 运行预构建脚本
-        run: dart run scripts/prebuild.dart --installer
+        shell: bash
+        run: |
+          ARGS=""
+          if [ "$RUNNER_OS" != "macOS" ]; then
+            ARGS="--installer"
+          fi
+          dart run scripts/prebuild.dart $ARGS
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
@@ -194,7 +200,13 @@ jobs:
         run: dart run slang
 
       - name: 运行构建脚本
-        run: dart run scripts/build.dart --with-installer --with-debug
+        shell: bash
+        run: |
+          ARGS="--with-debug"
+          if [ "$RUNNER_OS" != "macOS" ]; then
+            ARGS="$ARGS --with-installer"
+          fi
+          dart run scripts/build.dart $ARGS
 
       - name: 复制构建产物到 dist
         shell: bash
