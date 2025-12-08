@@ -307,10 +307,11 @@ class SubscriptionService {
 
     final jsonData = {
       'subscriptions': subscriptions.map((s) => s.toJson()).toList(),
-      'version': 1,
     };
 
-    await listFile.writeAsString(json.encode(jsonData));
+    await listFile.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(jsonData),
+    );
     Logger.info('已保存订阅列表，共 ${subscriptions.length} 个订阅');
   }
 

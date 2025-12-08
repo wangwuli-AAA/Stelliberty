@@ -360,10 +360,11 @@ class OverrideProvider extends ChangeNotifier {
 
       final jsonData = {
         'overrides': _overrides.map((o) => o.toJson()).toList(),
-        'version': 1,
       };
 
-      await listFile.writeAsString(jsonEncode(jsonData));
+      await listFile.writeAsString(
+        const JsonEncoder.withIndent('  ').convert(jsonData),
+      );
       Logger.debug('已保存覆写列表，共 ${_overrides.length} 个覆写');
     } catch (e) {
       Logger.error('保存覆写列表失败：$e');
