@@ -41,6 +41,7 @@ class ConnectionDetailDialog extends StatelessWidget {
         if (metadata.host.isNotEmpty) _InfoItem(t.hostLabel, metadata.host),
         if (metadata.sniffHost.isNotEmpty)
           _InfoItem(t.sniffHost, metadata.sniffHost),
+        _InfoItem(t.proxyGroup, connection.proxyGroup),
         _InfoItem(t.proxyNode, connection.proxyNode),
         if (connection.chains.length > 1)
           _InfoItem(t.proxyChain, connection.chains.reversed.join(' → ')),

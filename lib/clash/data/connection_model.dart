@@ -277,10 +277,21 @@ class ConnectionInfo {
     };
   }
 
-  // 获取代理节点名称
+  // 获取代理节点名称（实际的代理服务器）
   String get proxyNode {
     if (chains.isNotEmpty) {
       return chains.last;
+    }
+    return 'DIRECT';
+  }
+
+  // 获取代理组名称（用户选择的代理组）
+  String get proxyGroup {
+    if (chains.length > 1) {
+      return chains.first;
+    } else if (chains.length == 1) {
+      // 只有一个元素，可能是 DIRECT/REJECT 或代理组
+      return chains.first;
     }
     return 'DIRECT';
   }

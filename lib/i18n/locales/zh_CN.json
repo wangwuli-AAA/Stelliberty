@@ -279,6 +279,7 @@
     "targetAddress": "目标地址",
     "hostLabel": "主机名",
     "sniffHost": "嗅探主机",
+    "proxyGroup": "代理组",
     "proxyNode": "代理节点",
     "proxyChain": "代理链",
     "ruleLabel": "规则",

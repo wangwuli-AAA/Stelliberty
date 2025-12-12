@@ -279,6 +279,7 @@
     "targetAddress": "Target Address",
     "hostLabel": "Host",
     "sniffHost": "Sniff Host",
+    "proxyGroup": "Proxy Group",
     "proxyNode": "Proxy Node",
     "proxyChain": "Proxy Chain",
     "ruleLabel": "Rule",
