@@ -20,7 +20,7 @@ class LogProvider extends ChangeNotifier {
   static const _maxLogsCount = 2000; // 最多保留 2000 条日志
 
   // 过滤和控制状态
-  bool _isPaused = false;
+  bool _isMonitoringPaused = false;
   ClashLogLevel? _filterLevel;
   String _searchKeyword = '';
 
@@ -36,7 +36,7 @@ class LogProvider extends ChangeNotifier {
 
   // Getters
   List<ClashLogMessage> get logs => List.unmodifiable(_logs);
-  bool get isPaused => _isPaused;
+  bool get isMonitoringPaused => _isMonitoringPaused;
   ClashLogLevel? get filterLevel => _filterLevel;
   String get searchKeyword => _searchKeyword;
   bool get isLoading => _isLoading;
@@ -112,7 +112,7 @@ class LogProvider extends ChangeNotifier {
   void _subscribeToLogStream() {
     _logSubscription = ClashLogService.instance.logStream.listen(
       (log) {
-        if (!_isPaused) {
+        if (!_isMonitoringPaused) {
           _pendingLogs.add(log);
         }
       },
@@ -171,11 +171,11 @@ class LogProvider extends ChangeNotifier {
     Logger.info('LogProvider: 日志已清空');
   }
 
-  // 切换暂停状态
+  // 切换暂停状态（监控）
   void togglePause() {
-    _isPaused = !_isPaused;
+    _isMonitoringPaused = !_isMonitoringPaused;
     notifyListeners();
-    Logger.info('LogProvider: 暂停状态 = $_isPaused');
+    Logger.info('LogProvider: 日志监控暂停状态 = $_isMonitoringPaused');
   }
 
   // 设置过滤级别

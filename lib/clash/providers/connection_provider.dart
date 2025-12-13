@@ -47,9 +47,9 @@ class ConnectionProvider extends ChangeNotifier {
   // 刷新间隔（秒）
   static const int _refreshIntervalSeconds = 1;
 
-  // 是否暂停自动刷新
-  bool _isPaused = false;
-  bool get isPaused => _isPaused;
+  // 是否暂停自动刷新（监控）
+  bool _isMonitoringPaused = false;
+  bool get isMonitoringPaused => _isMonitoringPaused;
 
   // 过滤级别
   ConnectionFilterLevel _filterLevel = ConnectionFilterLevel.all;
@@ -103,7 +103,7 @@ class ConnectionProvider extends ChangeNotifier {
       const Duration(seconds: _refreshIntervalSeconds),
       (_) {
         // 只有在未暂停时才刷新
-        if (!_isPaused) {
+        if (!_isMonitoringPaused) {
           refreshConnections();
         }
       },
@@ -123,10 +123,10 @@ class ConnectionProvider extends ChangeNotifier {
     }
   }
 
-  // 暂停/恢复自动刷新
+  // 暂停/恢复自动刷新（监控）
   void togglePause() {
-    _isPaused = !_isPaused;
-    Logger.info('连接列表自动刷新已${_isPaused ? "暂停" : "恢复"}');
+    _isMonitoringPaused = !_isMonitoringPaused;
+    Logger.info('连接列表自动刷新已${_isMonitoringPaused ? "暂停" : "恢复"}');
     notifyListeners();
   }
 

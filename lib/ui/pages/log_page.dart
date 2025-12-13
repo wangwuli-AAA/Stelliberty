@@ -258,10 +258,10 @@ class _LogPageState extends State<LogPage> {
                 children: [
                   // 暂停/恢复按钮
                   ModernIconTooltip(
-                    message: provider.isPaused
+                    message: provider.isMonitoringPaused
                         ? context.translate.connection.resumeBtn
                         : context.translate.connection.pauseBtn,
-                    icon: provider.isPaused
+                    icon: provider.isMonitoringPaused
                         ? Icons.play_arrow_rounded
                         : Icons.pause_rounded,
                     onPressed: provider.togglePause,
