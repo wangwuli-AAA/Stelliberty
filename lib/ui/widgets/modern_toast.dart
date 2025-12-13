@@ -256,7 +256,7 @@ class _ToastWidgetState extends State<_ToastWidget>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(config.icon, color: config.iconColor, size: 20),
+                    Icon(config.icon, color: config.iconColor, size: 24),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -290,22 +290,22 @@ class _ToastWidgetState extends State<_ToastWidget>
       case ToastType.success:
         return _ToastConfig(
           iconColor: Colors.green.shade500,
-          icon: Icons.check_circle_rounded,
+          icon: Icons.check_circle_outline_rounded,
         );
       case ToastType.error:
         return _ToastConfig(
           iconColor: Colors.red.shade500,
-          icon: Icons.error_rounded,
+          icon: Icons.cancel_rounded,
         );
       case ToastType.warning:
         return _ToastConfig(
           iconColor: Colors.orange.shade500,
-          icon: Icons.warning_rounded,
+          icon: Icons.warning_amber_rounded,
         );
       case ToastType.info:
         return _ToastConfig(
           iconColor: Colors.blue.shade500,
-          icon: Icons.info_rounded,
+          icon: Icons.info_outline_rounded,
         );
     }
   }
