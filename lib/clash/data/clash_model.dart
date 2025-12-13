@@ -5,6 +5,7 @@ class ProxyGroup {
   final String? now; // 当前选中的节点
   final List<String> all; // 所有可用节点
   final bool hidden; // 是否隐藏
+  final String? icon; // 代理组图标 URL
 
   ProxyGroup({
     required this.name,
@@ -12,6 +13,7 @@ class ProxyGroup {
     this.now,
     required this.all,
     this.hidden = false,
+    this.icon,
   });
 
   factory ProxyGroup.fromJson(String name, Map<String, dynamic> json) {
@@ -21,6 +23,7 @@ class ProxyGroup {
       now: json['now'],
       all: List<String>.from(json['all'] ?? []),
       hidden: json['hidden'] ?? false,
+      icon: json['icon'],
     );
   }
 
@@ -31,6 +34,7 @@ class ProxyGroup {
       'now': now,
       'all': all,
       'hidden': hidden,
+      'icon': icon,
     };
   }
 
@@ -40,6 +44,7 @@ class ProxyGroup {
     String? now,
     List<String>? all,
     bool? hidden,
+    String? icon,
   }) {
     return ProxyGroup(
       name: name ?? this.name,
@@ -47,6 +52,7 @@ class ProxyGroup {
       now: now ?? this.now,
       all: all ?? this.all,
       hidden: hidden ?? this.hidden,
+      icon: icon ?? this.icon,
     );
   }
 }

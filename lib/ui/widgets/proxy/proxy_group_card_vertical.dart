@@ -84,12 +84,43 @@ class ProxyGroupCardVertical extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 代理组名称
-                Text(
-                  group.name,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                // 代理组名称和图标
+                Row(
+                  children: [
+                    // 代理组图标
+                    if (group.icon != null && group.icon!.isNotEmpty)
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: Image.network(
+                            group.icon!,
+                            width: 24,
+                            height: 24,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
+                              Icons.language,
+                              size: 18,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Icon(Icons.language, size: 18, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        group.name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 // 当前选中节点
