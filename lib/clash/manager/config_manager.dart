@@ -123,6 +123,14 @@ class ConfigManager {
     );
   }
 
+  // 从持久化存储重新加载配置到内存
+  // 用于备份还原后刷新内存状态
+  void reloadFromPreferences() {
+    Logger.info('从持久化存储重新加载配置');
+    _loadPersistedConfig();
+    _notifyListeners();
+  }
+
   // 获取配置
   Future<Map<String, dynamic>> getConfig() async {
     if (!_isCoreRunning()) {

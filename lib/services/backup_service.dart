@@ -4,6 +4,7 @@ import 'package:path/path.dart' as path;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:stelliberty/storage/preferences.dart';
 import 'package:stelliberty/clash/storage/preferences.dart';
+import 'package:stelliberty/clash/manager/manager.dart';
 import 'package:stelliberty/services/path_service.dart';
 import 'package:stelliberty/utils/logger.dart';
 
@@ -187,6 +188,9 @@ class BackupService {
 
       // 9. 还原 PAC 文件
       await _restorePacFile(backupData.data['pac_file'] as String?);
+
+      // 10. 刷新内存状态（使 ClashManager 重新从持久化存储加载配置）
+      ClashManager.instance.reloadFromPreferences();
 
       Logger.info('备份还原成功');
     } catch (e) {

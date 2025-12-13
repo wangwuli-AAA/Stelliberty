@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:stelliberty/services/backup_service.dart';
+import 'package:stelliberty/clash/manager/manager.dart';
 import 'package:stelliberty/ui/common/modern_feature_card.dart';
 import 'package:stelliberty/ui/constants/spacing.dart';
 import 'package:stelliberty/ui/widgets/modern_toast.dart';
@@ -180,6 +181,14 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
     try {
       // 还原备份
       await BackupService.instance.restoreBackup(result.files.first.path!);
+
+      if (!mounted) return;
+
+      // 如果核心正在运行，重启核心以应用新配置
+      if (ClashManager.instance.isCoreRunning) {
+        Logger.info('备份还原成功，重启核心以应用新配置');
+        await ClashManager.instance.restartCore();
+      }
 
       if (!mounted) return;
       setState(() => _isRestoring = false);

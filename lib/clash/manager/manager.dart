@@ -529,6 +529,12 @@ class ClashManager extends ChangeNotifier {
     return await _configManager.setOutboundMode(outboundMode);
   }
 
+  // 从持久化存储重新加载配置到内存
+  // 用于备份还原后刷新内存状态
+  void reloadFromPreferences() {
+    _configManager.reloadFromPreferences();
+  }
+
   Future<void> updateSystemProxySettings() async {
     await _systemProxyManager.updateSystemProxy();
   }
