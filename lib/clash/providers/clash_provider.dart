@@ -1025,6 +1025,131 @@ class ClashProvider extends ChangeNotifier {
     }
   }
 
+  // 批量测试所有代理节点的延迟
+  Future<void> testAllProxiesDelays([String? testUrl]) async {
+    if (_isBatchTestingDelay) {
+      Logger.warning('批量测试正在进行中，忽略重复请求');
+      return;
+    }
+
+    // 收集所有代理节点名称（去重）
+    final allProxyNames = <String>{};
+    for (final group in _allProxyGroups) {
+      allProxyNames.addAll(
+        group.all.where((proxyName) {
+          final node = _proxyNodes[proxyName];
+          return node != null;
+        }),
+      );
+    }
+
+    if (allProxyNames.isEmpty) {
+      Logger.warning('没有可测试的代理节点');
+      return;
+    }
+
+    // 标记批量测试开始
+    _isBatchTestingDelay = true;
+    _testingNodes.clear();
+    _testingNodes.addAll(allProxyNames);
+    _lastNotifyTime = null; // 重置节流计时器
+    notifyListeners();
+
+    // 标记是否有待通知的更新
+    bool hasPendingUpdates = false;
+
+    try {
+      Logger.info('开始测试所有节点延迟，共 ${allProxyNames.length} 个节点');
+
+      // 直接批量测试所有去重后的节点（不遍历代理组，避免重复测试）
+      final proxyNamesList = allProxyNames.toList();
+
+      // 使用滑动窗口并发测试
+      const windowSize = 300;
+      final completer = Completer<void>();
+      int activeTests = 0;
+      int currentIndex = 0;
+      int successCount = 0;
+
+      Future<void> testNext() async {
+        if (currentIndex >= proxyNamesList.length) {
+          if (activeTests == 0) {
+            completer.complete();
+          }
+          return;
+        }
+
+        final nodeName = proxyNamesList[currentIndex];
+        currentIndex++;
+        activeTests++;
+
+        try {
+          final delay = await DelayTestService.testProxyDelay(
+            nodeName,
+            _proxyNodes,
+            _allProxyGroups,
+            _selectedMap,
+            testUrl: testUrl,
+          );
+
+          // 节点测试完成，立即更新延迟值
+          final node = _proxyNodes[nodeName];
+          if (node != null) {
+            _proxyNodes[nodeName] = node.copyWith(delay: delay);
+            hasPendingUpdates = true;
+
+            if (delay > 0) {
+              successCount++;
+            }
+          }
+
+          // 从测试集合中移除
+          _testingNodes.remove(nodeName);
+
+          // 节流通知 UI 更新（每 100ms 最多一次）
+          final now = DateTime.now();
+          if (hasPendingUpdates &&
+              (_lastNotifyTime == null ||
+                  now.difference(_lastNotifyTime!).inMilliseconds >=
+                      _notifyThrottleMs)) {
+            // 仅在有更新时才创建新 Map（触发 Selector 重建）
+            _proxyNodes = Map<String, ProxyNode>.from(_proxyNodes);
+            _proxyNodesUpdateCount++;
+            notifyListeners();
+            _lastNotifyTime = now;
+            hasPendingUpdates = false;
+          }
+        } catch (e) {
+          Logger.error('测试节点 $nodeName 失败：$e');
+          _testingNodes.remove(nodeName);
+        } finally {
+          activeTests--;
+          // 继续测试下一个
+          testNext();
+        }
+      }
+
+      // 启动初始批次
+      for (int i = 0; i < windowSize && i < proxyNamesList.length; i++) {
+        testNext();
+      }
+
+      // 等待所有测试完成
+      await completer.future;
+      Logger.info('所有节点延迟测试完成，成功：$successCount/${proxyNamesList.length}');
+    } finally {
+      // 确保最后一次更新（包含所有节点的最终结果）
+      if (hasPendingUpdates) {
+        _proxyNodes = Map<String, ProxyNode>.from(_proxyNodes);
+        _proxyNodesUpdateCount++;
+      }
+      _testingNodes.clear();
+      _isBatchTestingDelay = false;
+      _lastNotifyTime = null;
+      notifyListeners();
+    }
+  }
+
   // 更新节点延迟
   void updateNodeDelay(String nodeName, int delay) {
     final node = _proxyNodes[nodeName];

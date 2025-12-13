@@ -98,9 +98,22 @@ class _ProxyActionBarState extends State<ProxyActionBar> {
         // 测速按钮
         _ActionButton(
           icon: Icons.network_check,
-          tooltip: context.translate.proxy.testAllDelays,
+          tooltip: widget.layoutMode == 'horizontal'
+              ? context
+                    .translate
+                    .proxy
+                    .testAllDelays // 横屏：测试当前组
+              : '测试所有节点延迟', // 竖屏：测试所有节点
           onPressed: state.canTestDelays
-              ? () => clashProvider.testGroupDelays(widget.selectedGroupName)
+              ? () {
+                  // 横屏：测试当前选中的代理组
+                  // 竖屏：测试所有代理组的所有节点
+                  if (widget.layoutMode == 'horizontal') {
+                    clashProvider.testGroupDelays(widget.selectedGroupName);
+                  } else {
+                    clashProvider.testAllProxiesDelays();
+                  }
+                }
               : null,
           isLoading: state.isBatchTestingDelay,
         ),
@@ -168,29 +181,50 @@ class _ProxyActionBarState extends State<ProxyActionBar> {
 
   // 构建竖向模式按钮
   Widget _buildVerticalButtons(BuildContext context) {
-    return Row(
-      children: [
-        // 回到顶部按钮
-        _ActionButton(
-          icon: Icons.vertical_align_top,
-          tooltip: context.translate.proxy.scrollToTop,
-          onPressed: widget.onScrollToTop,
-        ),
-        const SizedBox(width: 8),
-        // 排序按钮
-        _ActionButton(
-          icon: _getSortIcon(widget.sortMode),
-          tooltip: _getSortTooltip(context, widget.sortMode),
-          onPressed: _handleSortModeChange,
-        ),
-        const Spacer(),
-        // 布局切换按钮
-        _ActionButton(
-          icon: Icons.view_list,
-          tooltip: context.translate.proxy.switchToHorizontalLayout,
-          onPressed: widget.onLayoutModeChanged,
-        ),
-      ],
+    return Selector<ClashProvider, _ActionBarState>(
+      selector: (_, provider) => _ActionBarState(
+        isLoadingProxies: provider.isLoadingProxies,
+        isCoreRunning: provider.isCoreRunning,
+        isBatchTestingDelay: provider.isBatchTestingDelay,
+      ),
+      builder: (context, state, child) {
+        final clashProvider = context.read<ClashProvider>();
+
+        return Row(
+          children: [
+            // 测速按钮（竖屏模式：测试所有节点）
+            _ActionButton(
+              icon: Icons.network_check,
+              tooltip: '测试所有节点延迟',
+              onPressed: state.canTestDelays
+                  ? () => clashProvider.testAllProxiesDelays()
+                  : null,
+              isLoading: state.isBatchTestingDelay,
+            ),
+            const SizedBox(width: 8),
+            // 回到顶部按钮
+            _ActionButton(
+              icon: Icons.vertical_align_top,
+              tooltip: context.translate.proxy.scrollToTop,
+              onPressed: widget.onScrollToTop,
+            ),
+            const SizedBox(width: 8),
+            // 排序按钮
+            _ActionButton(
+              icon: _getSortIcon(widget.sortMode),
+              tooltip: _getSortTooltip(context, widget.sortMode),
+              onPressed: _handleSortModeChange,
+            ),
+            const Spacer(),
+            // 布局切换按钮
+            _ActionButton(
+              icon: Icons.view_list,
+              tooltip: context.translate.proxy.switchToHorizontalLayout,
+              onPressed: widget.onLayoutModeChanged,
+            ),
+          ],
+        );
+      },
     );
   }
 

@@ -14,6 +14,7 @@ class ProxyGroupCardVertical extends StatelessWidget {
   final Function(String proxyName) onTestDelay;
   final bool isCoreRunning;
   final Map<String, dynamic> proxyNodes;
+  final Set<String> testingNodes; // 正在测试的节点集合
   final ProxyNotifier viewModel;
   final VoidCallback? onLocate;
   final Map<String, GlobalKey>? nodeKeys;
@@ -28,6 +29,7 @@ class ProxyGroupCardVertical extends StatelessWidget {
     required this.onTestDelay,
     required this.isCoreRunning,
     required this.proxyNodes,
+    required this.testingNodes,
     required this.viewModel,
     this.onLocate,
     this.nodeKeys,
@@ -101,10 +103,10 @@ class ProxyGroupCardVertical extends StatelessWidget {
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) =>
                                 const Icon(
-                              Icons.language,
-                              size: 18,
-                              color: Colors.grey,
-                            ),
+                                  Icons.language,
+                                  size: 18,
+                                  color: Colors.grey,
+                                ),
                           ),
                         ),
                       )
@@ -287,6 +289,7 @@ class ProxyGroupCardVertical extends StatelessWidget {
                   onTap: () => onSelectProxy(nodeName),
                   onTestDelay: () async => onTestDelay(nodeName),
                   isClashRunning: isCoreRunning,
+                  isWaitingTest: testingNodes.contains(nodeName),
                 ),
               );
 

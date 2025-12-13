@@ -136,6 +136,7 @@ class _ProxyGroupListVerticalState extends State<ProxyGroupListVertical> {
                   onTestDelay: widget.onTestDelay,
                   isCoreRunning: widget.clashProvider.isCoreRunning,
                   proxyNodes: widget.clashProvider.proxyNodes,
+                  testingNodes: widget.clashProvider.testingNodes,
                   viewModel: widget.viewModel,
                   onLocate: () => _locateToSelectedNode(groupName),
                   nodeKeys: _nodeKeys,
