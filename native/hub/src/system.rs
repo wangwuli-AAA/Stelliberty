@@ -5,6 +5,7 @@ use tokio::spawn;
 
 pub mod app_update;
 pub mod auto_start;
+pub mod backup;
 #[cfg(target_os = "windows")]
 pub mod loopback;
 pub mod signals;
@@ -18,11 +19,15 @@ pub use signals::{
     AppUpdateResult,
     // 自启动消息
     AutoStartStatusResult,
+    // 备份与还原消息
+    BackupOperationResult,
     CheckAppUpdateRequest,
+    CreateBackupRequest,
     GetAutoStartStatus,
     // URL 启动消息
     OpenUrl,
     OpenUrlResult,
+    RestoreBackupRequest,
     SetAutoStartStatus,
 };
 
@@ -71,6 +76,30 @@ fn init_message_listeners() {
             dart_signal.message.handle();
         }
         log::info!("应用更新检查消息通道已关闭，退出监听器");
+    });
+
+    // 监听创建备份信号
+    spawn(async {
+        let receiver = CreateBackupRequest::get_dart_signal_receiver();
+        while let Some(dart_signal) = receiver.recv().await {
+            let message = dart_signal.message;
+            tokio::spawn(async move {
+                message.handle().await;
+            });
+        }
+        log::info!("创建备份消息通道已关闭，退出监听器");
+    });
+
+    // 监听还原备份信号
+    spawn(async {
+        let receiver = RestoreBackupRequest::get_dart_signal_receiver();
+        while let Some(dart_signal) = receiver.recv().await {
+            let message = dart_signal.message;
+            tokio::spawn(async move {
+                message.handle().await;
+            });
+        }
+        log::info!("还原备份消息通道已关闭，退出监听器");
     });
 }
 

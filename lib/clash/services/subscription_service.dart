@@ -1,8 +1,6 @@
 import 'dart:io';
-import 'dart:convert';
 import 'dart:async';
-import 'package:http/http.dart' as http;
-import 'package:http/io_client.dart';
+import 'dart:convert';
 import 'package:stelliberty/clash/data/subscription_model.dart';
 import 'package:stelliberty/clash/data/override_model.dart' as app_override;
 import 'package:stelliberty/clash/services/override_service.dart';
@@ -63,8 +61,6 @@ class SubscriptionService {
   // 下载订阅配置
   // 返回更新后的订阅对象
   Future<Subscription> downloadSubscription(Subscription subscription) async {
-    Logger.info('开始下载订阅：${subscription.name} (${subscription.url})');
-
     // 判断 Clash 是否运行
     final isClashRunning = ClashManager.instance.isCoreRunning;
 
@@ -80,38 +76,56 @@ class SubscriptionService {
       );
     }
 
-    Logger.info('代理模式：${effectiveProxyMode.value}');
-
-    // 根据代理模式创建 HTTP 客户端
-    final client = _createHttpClient(effectiveProxyMode);
+    // 使用 Rust 层下载订阅
+    final completer = Completer<DownloadSubscriptionResponse>();
+    StreamSubscription? downloadListener;
 
     try {
-      // 获取订阅的 User-Agent
-      final userAgent = subscription.userAgent;
+      // 订阅 Rust 下载响应流
+      downloadListener = DownloadSubscriptionResponse.rustSignalStream.listen((
+        result,
+      ) {
+        if (!completer.isCompleted) {
+          completer.complete(result.message);
+        }
+      });
 
-      // 发送 HTTP GET 请求
-      final response = await client
-          .get(Uri.parse(subscription.url), headers: {'User-Agent': userAgent})
-          .timeout(
-            Duration(seconds: ClashDefaults.subscriptionDownloadTimeout),
-          );
+      // 转换代理模式枚举
+      final rustProxyMode = _convertProxyMode(effectiveProxyMode);
 
-      if (response.statusCode != 200) {
-        throw Exception(
-          'HTTP ${response.statusCode}: ${response.reasonPhrase}',
-        );
+      // 发送下载请求到 Rust
+      final downloadRequest = DownloadSubscriptionRequest(
+        url: subscription.url,
+        proxyMode: rustProxyMode,
+        userAgent: subscription.userAgent,
+        timeoutSeconds: Uint64.fromBigInt(
+          BigInt.from(ClashDefaults.subscriptionDownloadTimeout),
+        ),
+        mixedPort: ClashPreferences.instance.getMixedPort(),
+      );
+      downloadRequest.sendSignalToRust();
+
+      // 等待下载结果
+      final downloadResult = await completer.future.timeout(
+        Duration(seconds: ClashDefaults.subscriptionDownloadTimeout + 5),
+        onTimeout: () {
+          throw Exception('订阅下载超时');
+        },
+      );
+
+      if (!downloadResult.success) {
+        throw Exception(downloadResult.errorMessage ?? '下载失败');
       }
 
       // 解析订阅信息
-      final subscriptionInfoHeader = response.headers['subscription-userinfo'];
-      final info = SubscriptionInfo.fromHeader(subscriptionInfoHeader);
+      final info = _convertSubscriptionInfo(downloadResult.subscriptionInfo);
 
-      // 获取配置内容（原始内容）
-      String configContent = utf8.decode(response.bodyBytes);
+      // 获取配置内容
+      String configContent = downloadResult.content;
 
       // 使用 ProxyParser 解析订阅内容（支持标准 YAML、Base64 编码、纯文本代理链接）
       // 创建 Completer 等待解析结果
-      final completer = Completer<String>();
+      final parseCompleter = Completer<String>();
       StreamSubscription? streamListener;
 
       try {
@@ -119,11 +133,13 @@ class SubscriptionService {
         streamListener = ParseSubscriptionResponse.rustSignalStream.listen((
           result,
         ) {
-          if (!completer.isCompleted) {
+          if (!parseCompleter.isCompleted) {
             if (result.message.success) {
-              completer.complete(result.message.parsedConfig);
+              parseCompleter.complete(result.message.parsedConfig);
             } else {
-              completer.completeError(Exception(result.message.errorMessage));
+              parseCompleter.completeError(
+                Exception(result.message.errorMessage),
+              );
             }
           }
         });
@@ -133,7 +149,7 @@ class SubscriptionService {
         parseRequest.sendSignalToRust();
 
         // 等待解析结果
-        final parsedConfigContent = await completer.future.timeout(
+        final parsedConfigContent = await parseCompleter.future.timeout(
           const Duration(seconds: 30),
           onTimeout: () {
             throw Exception('订阅解析超时');
@@ -169,36 +185,33 @@ class SubscriptionService {
       Logger.error('下载订阅失败：${subscription.name} - $e');
       rethrow;
     } finally {
-      // 确保客户端被关闭
-      client.close();
+      // 停止监听下载响应流
+      await downloadListener?.cancel();
     }
   }
 
-  // 根据代理模式创建 HTTP 客户端
-  http.Client _createHttpClient(SubscriptionProxyMode proxyMode) {
-    switch (proxyMode) {
+  // 转换代理模式枚举（Dart → Rust）
+  ProxyMode _convertProxyMode(SubscriptionProxyMode mode) {
+    switch (mode) {
       case SubscriptionProxyMode.direct:
-        // 直连：使用默认客户端
-        Logger.debug('使用直连模式');
-        return http.Client();
-
+        return ProxyMode.direct;
       case SubscriptionProxyMode.system:
-        // 系统代理：使用系统环境变量配置的代理
-        Logger.debug('使用系统代理模式');
-        final httpClient = HttpClient();
-        httpClient.findProxy = HttpClient.findProxyFromEnvironment;
-        return IOClient(httpClient);
-
+        return ProxyMode.system;
       case SubscriptionProxyMode.core:
-        // 核心代理：使用 Clash 的混合端口作为代理
-        final mixedPort = ClashPreferences.instance.getMixedPort();
-        final proxyUrl = 'PROXY 127.0.0.1:$mixedPort';
-        Logger.debug('使用核心代理模式：$proxyUrl');
-
-        final httpClient = HttpClient();
-        httpClient.findProxy = (uri) => proxyUrl;
-        return IOClient(httpClient);
+        return ProxyMode.core;
     }
+  }
+
+  // 转换订阅信息（Rust → Dart）
+  SubscriptionInfo? _convertSubscriptionInfo(SubscriptionInfoData? rustInfo) {
+    if (rustInfo == null) return null;
+
+    return SubscriptionInfo(
+      upload: rustInfo.upload?.toInt() ?? 0,
+      download: rustInfo.download?.toInt() ?? 0,
+      total: rustInfo.total?.toInt() ?? 0,
+      expire: rustInfo.expire?.toInt() ?? 0,
+    );
   }
 
   // 验证配置文件格式

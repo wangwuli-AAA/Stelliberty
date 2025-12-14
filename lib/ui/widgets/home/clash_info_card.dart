@@ -173,11 +173,8 @@ class _ClashInfoCardState extends State<ClashInfoCard> {
       final currentVersion = await CoreUpdateService.getCurrentCoreVersion();
 
       // 2. 获取最新版本信息（不下载完整文件）
-      final releaseInfo = await CoreUpdateService.getLatestRelease();
-      final latestVersion = (releaseInfo['tag_name'] as String).replaceFirst(
-        'v',
-        '',
-      );
+      final latestVersionTag = await CoreUpdateService.getLatestRelease();
+      final latestVersion = latestVersionTag.replaceFirst('v', '');
 
       Logger.info('当前版本: ${currentVersion ?? "未知"}, 最新版本: $latestVersion');
 

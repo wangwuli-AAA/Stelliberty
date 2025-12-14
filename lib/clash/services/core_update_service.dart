@@ -1,19 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
 import 'package:stelliberty/utils/logger.dart';
+import 'package:stelliberty/src/bindings/signals/signals.dart';
 
 // 更新进度回调：progress (0.0-1.0)，message (当前步骤描述)
 typedef ProgressCallback = void Function(double progress, String message);
 
 // 核心更新服务：从 GitHub 下载最新的 Mihomo 核心并替换现有核心
 class CoreUpdateService {
-  static const String _githubRepo = "MetaCubeX/mihomo";
-  static const String _apiBaseUrl = "https://api.github.com/repos";
-
   // 获取当前安装的核心版本
   static Future<String?> getCurrentCoreVersion() async {
     try {
@@ -112,56 +107,54 @@ class CoreUpdateService {
   static Future<(String, List<int>)> downloadCore({
     ProgressCallback? onProgress,
   }) async {
-    try {
-      onProgress?.call(0.0, '获取版本信息');
+    final completer = Completer<DownloadCoreResponse>();
+    StreamSubscription? responseListener;
+    StreamSubscription? progressListener;
 
+    try {
       // 1. 获取当前平台和架构
       final platform = _getCurrentPlatform();
       final arch = _getCurrentArch();
 
-      // 2. 获取最新版本信息
-      final releaseInfo = await getLatestRelease();
-      final version = releaseInfo['tag_name'] as String;
-      Logger.info('发现新版本：$version');
+      // 2. 订阅进度通知
+      progressListener = DownloadCoreProgress.rustSignalStream.listen((result) {
+        final progress = result.message;
+        onProgress?.call(progress.progress, progress.message);
+      });
 
-      onProgress?.call(0.1, '找到版本: $version');
+      // 3. 订阅响应流
+      responseListener = DownloadCoreResponse.rustSignalStream.listen((result) {
+        if (!completer.isCompleted) {
+          completer.complete(result.message);
+        }
+      });
 
-      // 3. 查找对应平台的资源
-      final asset = _findAsset(releaseInfo, platform, arch);
-      if (asset == null) {
-        throw Exception('未找到适用于 $platform-$arch 的核心文件');
-      }
+      // 4. 发送下载请求到 Rust
+      final request = DownloadCoreRequest(platform: platform, arch: arch);
+      request.sendSignalToRust();
 
-      final downloadUrl = asset['browser_download_url'] as String;
-      final fileName = asset['name'] as String;
-
-      onProgress?.call(0.2, '开始下载');
-
-      // 4. 下载核心文件
-      final coreBytes = await _downloadCore(
-        downloadUrl,
-        onProgress: (downloaded, total) {
-          if (total > 0) {
-            final progress = 0.2 + (downloaded / total) * 0.6;
-            final mbDownloaded = (downloaded / 1024 / 1024).toStringAsFixed(1);
-            final mbTotal = (total / 1024 / 1024).toStringAsFixed(1);
-            onProgress?.call(progress, '下载中 $mbDownloaded/$mbTotal MB');
-          }
+      // 5. 等待下载结果
+      final result = await completer.future.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('核心下载超时');
         },
       );
 
-      onProgress?.call(0.8, '解压文件');
+      if (!result.success) {
+        throw Exception(result.errorMessage ?? '核心下载失败');
+      }
 
-      // 5. 解压核心文件
-      final extractedBytes = await _extractCore(fileName, coreBytes);
+      final version = result.version ?? '';
+      final coreBytes = result.coreBytes ?? [];
 
-      onProgress?.call(1.0, '下载完成');
-
-      Logger.info('核心下载成功：$version');
-      return (version, extractedBytes);
+      return (version, coreBytes);
     } catch (e) {
       Logger.error('核心下载失败：$e');
       rethrow;
+    } finally {
+      await responseListener?.cancel();
+      await progressListener?.cancel();
     }
   }
 
@@ -170,155 +163,76 @@ class CoreUpdateService {
     required String coreDir,
     required List<int> coreBytes,
   }) async {
+    final completer = Completer<ReplaceCoreResponse>();
+    StreamSubscription? listener;
+
     try {
-      await _replaceCore(coreDir, coreBytes);
-      Logger.info('核心替换成功');
+      // 订阅 Rust 响应流
+      listener = ReplaceCoreResponse.rustSignalStream.listen((result) {
+        if (!completer.isCompleted) {
+          completer.complete(result.message);
+        }
+      });
+
+      // 发送替换请求到 Rust
+      final request = ReplaceCoreRequest(
+        coreDir: coreDir,
+        coreBytes: coreBytes,
+        platform: _getCurrentPlatform(),
+      );
+      request.sendSignalToRust();
+
+      // 等待结果
+      final result = await completer.future.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('核心替换超时');
+        },
+      );
+
+      if (!result.success) {
+        throw Exception(result.errorMessage ?? '核心替换失败');
+      }
     } catch (e) {
       Logger.error('核心替换失败：$e');
       rethrow;
+    } finally {
+      await listener?.cancel();
     }
   }
 
   // 获取最新的 Release 信息
-  static Future<Map<String, dynamic>> getLatestRelease() async {
-    final url = Uri.parse('$_apiBaseUrl/$_githubRepo/releases/latest');
+  static Future<String> getLatestRelease() async {
+    final completer = Completer<GetLatestCoreVersionResponse>();
+    StreamSubscription? listener;
 
     try {
-      final response = await http
-          .get(url)
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () => throw TimeoutException('获取版本信息超时'),
-          );
+      // 订阅 Rust 响应流
+      listener = GetLatestCoreVersionResponse.rustSignalStream.listen((result) {
+        if (!completer.isCompleted) {
+          completer.complete(result.message);
+        }
+      });
 
-      if (response.statusCode != 200) {
-        throw Exception('获取版本信息失败: HTTP ${response.statusCode}');
-      }
+      // 发送请求到 Rust
+      final request = GetLatestCoreVersionRequest();
+      request.sendSignalToRust();
 
-      return json.decode(response.body) as Map<String, dynamic>;
-    } catch (e) {
-      throw Exception('无法连接到 GitHub: $e');
-    }
-  }
-
-  // 查找匹配的资源文件
-  static Map<String, dynamic>? _findAsset(
-    Map<String, dynamic> releaseInfo,
-    String platform,
-    String arch,
-  ) {
-    final assets = releaseInfo['assets'] as List;
-    final keyword = '$platform-$arch';
-
-    for (final asset in assets) {
-      final name = asset['name'] as String;
-      if (name.contains(keyword)) {
-        return asset as Map<String, dynamic>;
-      }
-    }
-
-    return null;
-  }
-
-  // 下载核心文件（支持进度回调，使用系统代理）
-  static Future<List<int>> _downloadCore(
-    String url, {
-    Function(int downloaded, int total)? onProgress,
-  }) async {
-    HttpClient? client;
-    try {
-      // 创建 HttpClient，默认使用系统代理设置
-      client = HttpClient();
-
-      final request = await client.getUrl(Uri.parse(url));
-      final response = await request.close().timeout(
-        const Duration(seconds: 30),
-        onTimeout: () => throw TimeoutException('下载超时'),
+      // 等待结果
+      final result = await completer.future.timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException('获取版本信息超时');
+        },
       );
 
-      if (response.statusCode != 200) {
-        throw Exception('下载失败: HTTP ${response.statusCode}');
+      if (!result.success) {
+        throw Exception(result.errorMessage ?? '获取版本信息失败');
       }
 
-      final contentLength = response.contentLength;
-      final bytes = <int>[];
-
-      await for (final chunk in response) {
-        bytes.addAll(chunk);
-        onProgress?.call(bytes.length, contentLength);
-      }
-
-      return bytes;
-    } catch (e) {
-      throw Exception('下载失败: $e');
+      return result.version ?? '';
     } finally {
-      client?.close();
-    }
-  }
-
-  // 解压核心文件
-  static Future<List<int>> _extractCore(
-    String fileName,
-    List<int> fileBytes,
-  ) async {
-    try {
-      if (fileName.endsWith('.zip')) {
-        final archive = ZipDecoder().decodeBytes(fileBytes);
-        final coreFile = archive.firstWhere(
-          (file) =>
-              file.isFile &&
-              (file.name.endsWith('.exe') || !file.name.contains('.')),
-          orElse: () => throw Exception('压缩包中未找到可执行文件'),
-        );
-        return coreFile.content as List<int>;
-      } else if (fileName.endsWith('.gz')) {
-        return GZipDecoder().decodeBytes(fileBytes);
-      } else {
-        throw Exception('不支持的文件格式: $fileName');
-      }
-    } catch (e) {
-      throw Exception('解压失败: $e');
-    }
-  }
-
-  // 替换核心文件：备份旧核心 → 写入新核心 → 设置权限 → 失败时自动回滚
-  static Future<void> _replaceCore(String coreDir, List<int> coreBytes) async {
-    final platform = _getCurrentPlatform();
-    final coreName = platform == 'windows' ? 'clash-core.exe' : 'clash-core';
-    final coreFile = File(p.join(coreDir, coreName));
-    final backupFile = File(p.join(coreDir, '${coreName}_old'));
-
-    try {
-      // 1. 备份旧核心
-      if (await coreFile.exists()) {
-        await coreFile.rename(backupFile.path);
-      }
-
-      // 2. 写入新核心
-      await coreFile.writeAsBytes(coreBytes);
-
-      // 3. 设置可执行权限（Linux/macOS）
-      if (platform != 'windows') {
-        final result = await Process.run('chmod', ['+x', coreFile.path]);
-        if (result.exitCode != 0) {
-          Logger.warning('设置可执行权限失败：${result.stderr}');
-        }
-      }
-    } catch (e) {
-      // 如果失败，尝试恢复备份
-      if (await backupFile.exists()) {
-        try {
-          if (await coreFile.exists()) {
-            await coreFile.delete();
-          }
-          await backupFile.rename(coreFile.path);
-          Logger.info('已恢复旧核心');
-        } catch (restoreError) {
-          Logger.error('恢复备份失败：$restoreError');
-        }
-      }
-
-      throw Exception('替换核心失败: $e');
+      await listener?.cancel();
     }
   }
 

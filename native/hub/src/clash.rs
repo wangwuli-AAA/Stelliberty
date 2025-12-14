@@ -8,6 +8,7 @@ use rinf::{DartSignal, RustSignal};
 use tokio::spawn;
 
 pub mod config;
+pub mod core_update;
 pub mod network;
 pub mod overrides;
 pub mod process;
@@ -148,4 +149,10 @@ pub fn init() {
 
     // 启动配置生成监听器
     config::init_message_listeners();
+
+    // 启动订阅管理监听器
+    subscription::init_message_listeners();
+
+    // 启动核心更新监听器
+    core_update::init_message_listeners();
 }

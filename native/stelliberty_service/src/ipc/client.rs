@@ -2,8 +2,6 @@
 //
 // 预留给 Flutter 端使用
 
-#![allow(dead_code)]
-
 use super::error::{IpcError, Result};
 use super::protocol::{IPC_PATH, IpcCommand, IpcResponse};
 use std::time::Duration;
